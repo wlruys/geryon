@@ -4,7 +4,7 @@ Geryon is a deterministic experiment planner and executor for pack-based Hydra s
 
 A shamelessly vibe-coded extension of a SLURM+tmux runner script I've been using for a while, because I was tired of manually customizing it for different experiments and machines. 
 
-Made for an userbase of one, use and customize at your own risk!
+Made for a userbase of one, use and customize at your own risk!
 
 ## Quickstart
 
