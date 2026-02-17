@@ -1,108 +1,92 @@
 # Geryon
 
-Geryon is a runner for giant experiments using Hydra.
+Geryon is a deterministic experiment planner and executor for pack-based Hydra sweeps.
 
-Core commands:
+## Quickstart
 
-- `geryon launch --experiment <yaml> --out <dir> --batch-size <n> [--backend local|slurm]`
-- `geryon plan --experiment <yaml> --out <dir> --batch-size <n> [--run-set <name>|--all-run-sets]`
-- `geryon inspect-config --experiment <yaml> [--format yaml|json]`
-- `geryon run-local --run <run_dir> [--profile <name>] [--format table|json]`
-- `geryon run-slurm --run <run_dir> [--profile <name>] [--format table|json]`
-- `geryon status --run <run_dir> [--format table|json] [--by-pack <pack>]`
-- `geryon report --run <run_dir> [--format table|markdown|json]`
-- `geryon recover --run <run_dir> [--status failed|terminated|missing] [--backend local|slurm]`
-- `geryon rerun --run <run_dir> [--status failed|terminated|missing]`
-- `geryon list-profiles [--profiles-file <path>]`
-- `geryon collect --run <run_dir> [--format table|json]`
-- `geryon clean --run <run_dir> [--plan|--exec|--all]`
+```bash
+uv venv && uv sync
+
+# Plan and run in one step
+uv run geryon launch \
+  --experiment ./experiment.yaml \
+  --out ./outputs \
+  --batch-size 16 \
+  --backend local \
+  --profile local_fast \
+  --profiles-file ./profiles.yaml
+
+# Or split into stages
+uv run geryon plan --experiment ./experiment.yaml --out ./outputs --batch-size 16
+uv run geryon run-local --run ./outputs/runs/<run_id> --profile local_fast --profiles-file ./profiles.yaml
+uv run geryon collect --run ./outputs/runs/<run_id>
+```
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `launch` | Validate + plan + execute in one step |
+| `plan` | Generate config/batch artifacts |
+| `validate-config` | Check experiment schema |
+| `inspect-config` | Print composed config after imports/defs expansion |
+| `run-local` | Execute on the local machine |
+| `run-slurm` | Submit to Slurm via Submitit |
+| `status` | Summarize run progress |
+| `report` | Generate a run report (table, markdown, or JSON) |
+| `recover` | Retry failed/terminated configs in one step |
+| `rerun` | Build a retry selection file |
+| `collect` | Aggregate result records into a summary |
+| `list-profiles` | Show available profiles |
+| `clean` | Delete plan or exec artifacts |
 
 Rich table output is the default terminal UX. Use `--format json` for machine-readable output.
 
-The planner preserves existing `packs x options` semantics and writes deterministic plan artifacts under:
+## Artifacts
 
-- `<out>/runs/<run_id>/plan/`
-- `<out>/runs/<run_id>/exec/`
+All run files live under `<out>/runs/<run_id>/`:
 
-Planner diagnostics are written to:
-
-- `<out>/runs/<run_id>/plan/diagnostics.json`
-- `<out>/runs/<run_id>/plan/diagnostics.summary.txt`
-- `<out>/runs/<run_id>/plan/run_set.json`
-
-Execution task-level logs are written to:
-
-- `<out>/runs/<run_id>/exec/batch_logs/task_<jobid>_<arrayid>/task.stdout.log`
-- `<out>/runs/<run_id>/exec/batch_logs/task_<jobid>_<arrayid>/task.stderr.log`
-- `<out>/runs/<run_id>/exec/batch_logs/task_<jobid>_<arrayid>/task.events.jsonl`
-
-Execution work directories are created per launched command under:
-
-- `<out>/runs/<run_id>/exec/workdirs/task_<jobid>_<arrayid>/batch_<batch>/line_<line>_<config>_<attempt>/`
-
-Retry plans are written to:
-
-- `<out>/runs/<run_id>/exec/retries/retry_<timestamp>.json`
-
-Compatibility aliases are available:
-
-- `build` -> `plan`
-- `local` -> `run-local`
-- `slurm` -> `run-slurm`
-
-## Detailed Documentation
-
-- MkDocs site config: `mkdocs.yml`
-- `docs/index.md`: module overview and lifecycle.
-- `docs/getting-started.md`: install + first-run workflow.
-- `docs/experiments.md`: complete schema-v4 YAML reference.
-- `docs/packs.md`: composition model (`imports`/`option_sets`/`packs`/`groups`/`select`) and expansion rules.
-- `docs/dsl.md`: complete `geryon.dsl` API reference.
-- `docs/interface.md`: full CLI command/flag reference.
-- `docs/profiles.md`: `profiles.yaml` schema and precedence.
-- `docs/runtime-artifacts.md`: on-disk artifact contracts and status semantics.
-- `docs/python-api.md`: programmatic API entry points.
-- `docs/examples.md`: runnable examples map.
-
-Build docs locally:
-
-```bash
-mkdocs serve
-# or
-mkdocs build
+```
+plan/
+  configs.jsonl              # all planned configs
+  batches.jsonl              # batch groupings
+  batches/batch_000.txt      # rendered commands per batch
+  manifest.{jsonl,csv}       # {id, wandb_name, tags, params}
+  diagnostics.json           # composition/merge/constraint diagnostics
+  run_set.json               # selected run-set metadata
+exec/
+  results/                   # per-task result JSONL records
+  batch_logs/                # stdout/stderr/events per task
+  workdirs/                  # per-command work directories
+  retries/                   # retry selection files
 ```
 
-## Resume/Retry Workflow
+## Status and Recovery
 
-Use rich table status output for quick progress checks:
+Check progress:
 
 ```bash
 uv run geryon status --run ./outputs/runs/<run_id>
-uv run geryon status --run ./outputs/runs/<run_id> --format json
 uv run geryon status --run ./outputs/runs/<run_id> --by-pack architecture
-```
-
-Generate markdown/json reports:
-
-```bash
 uv run geryon report --run ./outputs/runs/<run_id> --format markdown --out report.md
-uv run geryon report --run ./outputs/runs/<run_id> --format json --by-pack architecture
 ```
 
-Create and execute recovery in one command (failed by default):
+Retry in one step:
 
 ```bash
 uv run geryon recover --run ./outputs/runs/<run_id> --status failed --backend local
 ```
 
-Equivalent explicit two-step flow:
+Or with two explicit steps:
 
 ```bash
 uv run geryon rerun --run ./outputs/runs/<run_id> --status failed
-uv run geryon run-local --run ./outputs/runs/<run_id> --retry-file ./outputs/runs/<run_id>/exec/retries/retry_<timestamp>.json --profile local_fast --profiles-file ./profiles.yaml
+uv run geryon run-local --run ./outputs/runs/<run_id> \
+  --retry-file ./outputs/runs/<run_id>/exec/retries/retry_<timestamp>.json \
+  --profile local_fast
 ```
 
-You can also force explicit IDs:
+Target specific configs directly:
 
 ```bash
 uv run geryon run-local --run ./outputs/runs/<run_id> --config-id <id1> --config-id <id2>
@@ -153,43 +137,17 @@ profiles:
       DATA_ROOT: /scratch/data
 ```
 
-A ready-to-edit template is included at `geryon/profiles.example.yaml`.
-Example multi-site presets for the example suite are included at
-`geryon/examples/configs/profiles.yaml`.
+A ready-to-edit template is at `profiles.example.yaml`. Example presets for the example suite are at `examples/configs/profiles.yaml`.
 
-Inspect available profiles:
+Profile precedence (lowest → highest): built-in defaults → `defaults.<command>` → explicit profile fields → CLI flags.
 
-```bash
-uv run geryon list-profiles
-uv run geryon list-profiles --profiles-file ./profiles.yaml --format json
-```
-
-Use profile defaults for Slurm:
+For extra `sbatch` flags, use `slurm_additional_parameters` or `defaults.run_slurm.sbatch_option`. Option keys can use either `-` or `_`.
 
 ```bash
-uv run geryon run-slurm \
-  --run ./outputs/runs/<run_id> \
-  --profile a100_short
+uv run geryon list-profiles --profiles-file ./profiles.yaml
+uv run geryon run-local --run ./outputs/runs/<run_id> --profile local_fast
+uv run geryon run-slurm --run ./outputs/runs/<run_id> --profile a100_short
 ```
-
-Use profile env/bootstrap settings for local runs:
-
-```bash
-uv run geryon run-local \
-  --run ./outputs/runs/<run_id> \
-  --profile local_fast
-```
-
-Resolution order is:
-1. Built-in defaults
-2. `profiles.<name>.defaults.<command>`
-3. Explicit profile fields
-4. CLI overrides (when available)
-
-Defaults are merged with explicit profile values; matching fields override defaults.
-For extra `sbatch` flags, use `slurm_additional_parameters` and
-`defaults.run_slurm.sbatch_option` in profiles. Options are merged with profile
-values taking precedence. Option keys can use either `-` or `_`.
 
 ## Run-Sets
 
@@ -227,37 +185,23 @@ Plan all variants:
 uv run geryon plan --experiment ./experiment.yaml --all-run-sets --out ./outputs --batch-size 16
 ```
 
-## Execution Failure Policies
+## Failure Policies
 
-Failure controls are configured in profile defaults (`defaults.run_local` / `defaults.run_slurm`):
+Configured under `defaults.run_local` / `defaults.run_slurm` in the profile:
 
-- `command_timeout_sec`
-- `max_retries`
-- `retry_on_status`
-- `max_failures`
-- `fail_fast_threshold`
+- `command_timeout_sec` — kill a command after this many seconds
+- `max_retries` — retry count per config
+- `retry_on_status` — statuses that trigger a retry (`failed`, `terminated`)
+- `max_failures` — absolute failure cap before stopping the batch
+- `fail_fast_threshold` — failure rate cap before stopping the batch
+
+Policy events (`retry_scheduled`, `timeout_kill`, `fail_fast_stop`) are recorded in `exec/batch_logs/`.
 
 ## Live Terminal UX
 
-Show live local execution progress by enabling `defaults.run_local.progress: true` in profile:
+Enable `defaults.run_local.progress: true` in the profile for a live local execution dashboard showing active commands, batch/line/config IDs, assigned cores, tmux session names, and recent completions.
 
-```bash
-uv run geryon run-local \
-  --run ./outputs/runs/<run_id> \
-  --profile local_fast
-```
-
-The live dashboard includes currently running commands, batch/line/config IDs,
-assigned cores (when available), active tmux session names, recent starts, and
-recent completions.
-
-Query SLURM queue state by enabling `defaults.run_slurm.query_status: true` in profile:
-
-```bash
-uv run geryon run-slurm \
-  --run ./outputs/runs/<run_id> \
-  --profile a100_short
-```
+Enable `defaults.run_slurm.query_status: true` to poll the Slurm queue during submission.
 
 JSONL integrity checks:
 
@@ -267,18 +211,9 @@ uv run geryon report --run ./outputs/runs/<run_id> --strict-jsonl --format json
 uv run geryon collect --run ./outputs/runs/<run_id> --strict-jsonl
 ```
 
-For Slurm runs, runtime env/bootstrap and submit preamble behavior are configured in profile fields
-(`env_script`, `env_setup_cmds`, `env`, `slurm_setup_cmds` and `defaults.run_slurm.sbatch_option`).
+## Environment Bootstrap
 
-Policy events are recorded in task logs:
-- `retry_scheduled`
-- `timeout_kill`
-- `fail_fast_stop`
-
-## Portable Environment Bootstrap
-
-Use one shared shell bootstrap script for both local and Slurm runs, and keep
-cluster-specific details out of Python code:
+Use one shared script for local and Slurm runs:
 
 ```bash
 # env/bootstrap.sh
@@ -293,148 +228,41 @@ fi
 export WANDB_API_KEY=...
 ```
 
-Then reference it from profile and run with that profile:
+Reference it via `env_script` in the profile:
 
 ```bash
 uv run geryon run-local --run ./outputs/runs/<run_id> --profile local_fast
 uv run geryon run-slurm --run ./outputs/runs/<run_id> --profile a100_short
 ```
 
-## Task Work Directory Injection
+## Hydra Work Directory
 
-At execution time, geryon appends a task-local CLI override to every launched command:
-
-- `hydra.run.dir=<absolute-path-under-run>/exec/workdirs/...`
-
-This path is unique per launched command attempt and lives next to run artifacts (`plan/`, `exec/`).
-
-## Composed Experiment Interface
-
-`experiment.yaml` can be composed from reusable subfiles so you can build
-ablations without rewriting full pack lists each time.
-
-Supported reusable definition blocks:
-
-- `option_sets`: reusable lists of options
-- `packs`: reusable pack templates
-- `groups`: reusable groups of pack selectors
-- `imports[].package`: optional namespace for definitions loaded through that import edge
-- `imports`: recursive file imports (relative to current file)
-
-Top-level experiment selectors:
-
-- `select.groups`: include one or more group refs
-- `select.packs`: include pack refs or inline packs
-
-Selector features for ablations:
-
-- `ref`: pack reference
-- `replace_options: true`: replace referenced pack options
-- `options_from`: append option sets
-- `options`: append inline options
-- `filter.include_ids`, `filter.exclude_ids`: filter options
-
-Example:
-
-```yaml
-# defs/options.yaml
-option_sets:
-  arch_family:
-    - id: arch_a
-      tag: arch-a
-      params:
-        model: {type: A}
-    - id: arch_b
-      tag: arch-b
-      params:
-        model: {type: B}
-  seeds:
-    - id: seed1
-      tag: seed1
-      params:
-        seed: 1
-    - id: seed2
-      tag: seed2
-      params:
-        seed: 2
-```
-
-```yaml
-# defs/packs.yaml
-packs:
-  architecture:
-    name: architecture
-    options_from:
-      - ref: arch_family
-  seed_pack:
-    name: seed
-    options_from:
-      - ref: seeds
-```
-
-```yaml
-# defs/groups.yaml
-groups:
-  core:
-    - ref: seed_pack
-```
-
-```yaml
-# experiment.yaml
-imports:
-  - path: defs/options.yaml
-    package: presets
-  - path: defs/packs.yaml
-    package: presets
-  - path: defs/groups.yaml
-    package: presets
-schema:
-  version: 4
-command:
-  program: python
-  args: ["-c", "print('run')"]
-select:
-  groups: [presets.core]
-  packs:
-    - ref: presets.architecture
-      replace_options: true
-      options_from:
-        - ref: presets.arch_family
-          include_ids: [arch_b]
-```
-
-This runs only `arch_b` with the shared `core` group, while reusing all
-predefined sets across experiments.
-
-Preview composed config before planning:
-
-```bash
-uv run geryon inspect-config \
-  --experiment ./experiment.yaml \
-  --format yaml \
-  --show-diagnostics
-```
-
-## Quickstart
-
-```bash
-cd geryon
-uv venv
-uv sync --extra dev --extra slurm --extra pylauncher
-uv run geryon plan --experiment ../src/jac_mlp_feature/experiment.yaml --out ./outputs --batch-size 16
-uv run geryon run-local --run ./outputs/runs/<run_id> --profile local_fast --profiles-file ./profiles.yaml
-uv run geryon collect --run ./outputs/runs/<run_id>
-```
+Geryon automatically injects `hydra.run.dir=<workdir>` into each launched command. The path is unique per attempt and lives under `exec/workdirs/`.
 
 ## Local Core Scheduling
 
-- Configure `cores`, `cores_per_task`, `max_concurrent_tasks`, and `max_total_cores` in profile defaults.
-- Linux pinning uses `taskset` when available, with `sched_setaffinity` as a best-effort fallback path.
-- On macOS and other platforms without Linux affinity APIs, core groups are still scheduled disjointly and thread-count env defaults are applied for safer oversubscription control.
+Set `cores_per_task`, `max_concurrent_tasks`, and `max_total_cores` in profile defaults. On Linux, CPU pinning uses `taskset`. On macOS, core groups are still scheduled disjointly with thread-count env defaults for oversubscription control.
 
 ## PyLauncher Executor
 
-- `executor: pylauncher` uses `pylauncher.ClassicLauncher` in Slurm environments and `pylauncher.LocalLauncher` outside Slurm, with a generated command file and one wrapper script per planned command.
-- Wrapper scripts capture per-command exit codes and preserve geryon stdout/stderr log paths.
-- If `LocalLauncher` is unavailable in the installed PyLauncher version, geryon falls back to `ClassicLauncher` with a local compatibility shim.
-- Install dependency: `uv pip install pylauncher`.
+Set `executor: pylauncher` in the profile. Uses `LocalLauncher` outside Slurm and `ClassicLauncher` inside, with a generated command file and one wrapper per planned command. If `LocalLauncher` is unavailable, geryon falls back to `ClassicLauncher` with a compatibility shim. Install with `uv pip install pylauncher`.
+
+## Aliases
+
+- `build` → `plan`
+- `local` → `run-local`
+- `slurm` → `run-slurm`
+
+## Documentation
+
+Full docs at `docs/` (build locally with `mkdocs serve`):
+
+- [Getting Started](docs/getting-started.md) — install and first run
+- [Experiment YAML Schema](docs/experiments.md) — schema-v4 reference
+- [Composition and Packs](docs/packs.md) — `imports`/`option_sets`/`packs`/`groups`/`select`
+- [Python DSL](docs/dsl.md) — `geryon.dsl` API
+- [CLI Reference](docs/interface.md) — every command and flag
+- [Profiles](docs/profiles.md) — `profiles.yaml` schema and precedence
+- [Runtime Artifacts](docs/runtime-artifacts.md) — on-disk layout and status model
+- [Python API](docs/python-api.md) — programmatic entry points
+- [Examples](docs/examples.md) — runnable scenarios
