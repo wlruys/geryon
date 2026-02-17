@@ -1,0 +1,35 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/flaky_app.py
+
+select:
+  packs:
+    - name: scenario
+      options:
+        - id: stable
+          params:
+            fail:
+              mode: none
+        - id: random_fail
+          params:
+            fail:
+              mode: random
+              rate: 0.6
+              exit_code: 2
+        - id: slow
+          params:
+            fail:
+              mode: slow
+              sleep_sec: 4
+    - name: seed
+      options:
+        - id: seed1
+          params:
+            seed: 1
+        - id: seed2
+          params:
+            seed: 2

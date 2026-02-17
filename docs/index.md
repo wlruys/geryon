@@ -38,5 +38,3 @@ mkdocs serve
 # or
 mkdocs build
 ```
-
-From the repository root: `/Users/wlruys/workspace/scheduling/geryon/geryon`.

@@ -17,6 +17,7 @@ from rich import box
 from rich.live import Live
 from rich.console import Console, Group
 from rich.table import Table
+from rich.theme import Theme
 import yaml
 
 from geryon._logging import setup_logging
@@ -174,11 +175,6 @@ def _short_config_id(config_id: str, *, width: int = 10) -> str:
     return text if len(text) <= width else text[:width]
 
 
-def _short_text(value: object, *, width: int = 100) -> str:
-    text = str(value)
-    return text if len(text) <= width else f"{text[: max(width - 3, 1)]}..."
-
-
 def _format_name_list(values: list[str], *, max_items: int = 3) -> str:
     items = [item for item in values if item]
     if not items:
@@ -217,7 +213,13 @@ def _format_concurrency(
 
 
 def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
-    summary = Table(title="Local Run Live", show_header=False, box=box.SIMPLE)
+    summary = Table(
+        title="Local Run Live",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     summary.add_column("Field", style="bold cyan")
     summary.add_column("Value")
     summary.add_row("Run ID", str(state.get("run_id", "")))
@@ -237,11 +239,13 @@ def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
             + _int_value(state.get("terminated"))
         ),
     )
+
+    s_count = _int_value(state.get("success"))
+    f_count = _int_value(state.get("failed"))
+    t_count = _int_value(state.get("terminated"))
     summary.add_row(
         "Status",
-        f"ok={_int_value(state.get('success'))} "
-        f"f={_int_value(state.get('failed'))} "
-        f"t={_int_value(state.get('terminated'))}",
+        f"[success]ok={s_count}[/] [error]f={f_count}[/] [warning]t={t_count}[/]",
     )
     summary.add_row("Retry", str(_int_value(state.get("retry_scheduled"))))
 
@@ -254,13 +258,16 @@ def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
             if str(_mapping(item).get("tmux_session", "")).strip()
         }
     )
-    summary.add_row("Tmux Active", _format_name_list(active_tmux_sessions))
+    if active_tmux_sessions:
+        summary.add_row("Tmux Active", _format_name_list(active_tmux_sessions))
 
-    running = Table(title="Running", box=box.SIMPLE)
+    running = Table(
+        title="Running", box=box.ROUNDED, padding=(0, 1), collapse_padding=True
+    )
     running.add_column("Exec")
     running.add_column("Task")
     running.add_column("B:L", justify="right")
-    running.add_column("Config")
+    running.add_column("Config", style="id", no_wrap=True)
     running.add_column("Cores")
     running.add_column("PID", justify="right")
     running.add_column("Sess")
@@ -270,7 +277,7 @@ def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
             str(item.get("executor", "")),
             f"{item.get('job_id', '')}/{item.get('array_task_id', '')}",
             f"{item.get('batch_index', '-')}/{item.get('line_index', '-')}",
-            _short_config_id(str(item.get("config_id", ""))),
+            str(item.get("config_id", "")),
             _format_cores(item.get("assigned_cores")),
             str(item.get("pid", "") or "-"),
             str(item.get("tmux_session", "") or "-"),
@@ -279,11 +286,13 @@ def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
         running.add_row("<none>", "-", "-", "-", "-", "-", "-")
 
     started_rows = list(state.get("recent_starts", []))
-    started = Table(title="Started (latest)", box=box.SIMPLE)
+    started = Table(
+        title="Started (latest)", box=box.ROUNDED, padding=(0, 1), collapse_padding=True
+    )
     started.add_column("Exec")
     started.add_column("Task")
     started.add_column("B:L", justify="right")
-    started.add_column("Config")
+    started.add_column("Config", style="id", no_wrap=True)
     started.add_column("Cores")
     started.add_column("PID", justify="right")
     started.add_column("Sess")
@@ -293,7 +302,7 @@ def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
             str(item.get("executor", "")),
             f"{item.get('job_id', '')}/{item.get('array_task_id', '')}",
             f"{item.get('batch_index', '-')}/{item.get('line_index', '-')}",
-            _short_config_id(str(item.get("config_id", ""))),
+            str(item.get("config_id", "")),
             _format_cores(item.get("assigned_cores")),
             str(item.get("pid", "") or "-"),
             str(item.get("tmux_session", "") or "-"),
@@ -302,11 +311,16 @@ def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
         started.add_row("-", "-", "-", "-", "-", "-", "-")
 
     recent_rows = list(state.get("recent_completed", []))
-    recent = Table(title="Completed (latest)", box=box.SIMPLE)
+    recent = Table(
+        title="Completed (latest)",
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     recent.add_column("St")
     recent.add_column("Exec")
     recent.add_column("B:L", justify="right")
-    recent.add_column("Config")
+    recent.add_column("Config", style="id", no_wrap=True)
     recent.add_column("Dur", justify="right")
     recent.add_column("Cores")
     recent.add_column("PID", justify="right")
@@ -315,16 +329,16 @@ def _render_local_live_dashboard(state: dict[str, Any]) -> Group:
         status = str(item.get("status", ""))
         status_style = status
         if status == "success":
-            status_style = "[green]ok[/green]"
+            status_style = "[success]ok[/success]"
         elif status == "failed":
-            status_style = "[red]fail[/red]"
+            status_style = "[error]fail[/error]"
         elif status == "terminated":
-            status_style = "[yellow]term[/yellow]"
+            status_style = "[warning]term[/warning]"
         recent.add_row(
             status_style,
             str(item.get("executor", "")),
             f"{item.get('batch_index', '-')}/{item.get('line_index', '-')}",
-            _short_config_id(str(item.get("config_id", ""))),
+            str(item.get("config_id", "")),
             str(item.get("duration_sec", "-")),
             _format_cores(item.get("assigned_cores")),
             str(item.get("pid", "") or "-"),
@@ -618,8 +632,26 @@ def _resolve_local_concurrency_payload(
     )
 
 
+_THEME = Theme(
+    {
+        "info": "cyan",
+        "warning": "yellow",
+        "error": "bold red",
+        "success": "bold green",
+        "path": "blue",
+        "id": "magenta",
+        "key": "bold cyan",
+        "value": "white",
+        "status.success": "bold green",
+        "status.failed": "bold red",
+        "status.terminated": "bold yellow",
+        "status.missing": "bold red",
+    }
+)
+
+
 def _console() -> Console:
-    return Console(highlight=False)
+    return Console(theme=_THEME, highlight=False)
 
 
 def _resolve_run_id(store: ArtifactStore) -> str:
@@ -989,93 +1021,171 @@ def _render_status_table(
     attempts = _mapping(summary.get("attempts"))
     batches = _mapping(summary.get("batches"))
 
-    overview = Table(title="Run Status", show_header=False)
+    overview = Table(
+        title="Run Status",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     overview.add_column("Field", style="bold cyan")
     overview.add_column("Value", style="white")
     overview.add_row("Run ID", str(summary.get("run_id", "")))
-    overview.add_row("Run Root", str(summary.get("run_root", "")))
+    overview.add_row("Run Root", str(summary.get("run_root", "")), style="path")
     overview.add_row("Generated", str(summary.get("generated_at", "")))
     overview.add_row("Configs", str(configs.get("total", 0)))
     overview.add_row("Attempts", str(attempts.get("total", 0)))
-    overview.add_row("Corrupt JSONL Lines", str(summary.get("corrupt_result_lines", 0)))
-    overview.add_row(
-        "Unfinished Batches",
-        ", ".join(str(item) for item in batches.get("unfinished_batch_indices", []))
-        or "none",
-    )
+    if summary.get("corrupt_result_lines"):
+        overview.add_row(
+            "Corrupt JSONL Lines",
+            f"[error]{summary.get('corrupt_result_lines')}[/error]",
+        )
+
+    unfinished_batches = batches.get("unfinished_batch_indices", [])
+    if unfinished_batches:
+        overview.add_row(
+            "Unfinished Batches",
+            ", ".join(str(item) for item in unfinished_batches),
+        )
     console.print(overview)
 
-    status_table = Table(title="Config Summary", show_lines=False)
+    status_table = Table(
+        title="Config Summary",
+        show_lines=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     status_table.add_column("Category", style="bold")
     status_table.add_column("Count", justify="right")
     latest_by_status = _mapping(configs.get("latest_by_status"))
     completion = _mapping(configs.get("completion"))
-    status_table.add_row("Latest success", str(latest_by_status.get("success", 0)))
-    status_table.add_row("Latest failed", str(latest_by_status.get("failed", 0)))
+
+    def _count_style(count: int, good: bool = True) -> str:
+        if count == 0:
+            return "dim"
+        return "success" if good else "error"
+
+    s_count = int(latest_by_status.get("success", 0))
+    status_table.add_row("Latest success", f"[{_count_style(s_count)}]{s_count}[/]")
+
+    f_count = int(latest_by_status.get("failed", 0))
     status_table.add_row(
-        "Latest terminated", str(latest_by_status.get("terminated", 0))
+        "Latest failed", f"[{_count_style(f_count, False)}]{f_count}[/]"
     )
-    status_table.add_row("Latest missing", str(latest_by_status.get("missing", 0)))
+
+    t_count = int(latest_by_status.get("terminated", 0))
+    status_table.add_row(
+        "Latest terminated", f"[{_count_style(t_count, False)}]{t_count}[/]"
+    )
+
+    m_count = int(latest_by_status.get("missing", 0))
+    status_table.add_row(
+        "Latest missing", f"[{_count_style(m_count, False)}]{m_count}[/]"
+    )
+
+    status_table.add_section()
     status_table.add_row("Resume complete", str(completion.get("complete", 0)))
     status_table.add_row("Resume pending", str(completion.get("pending", 0)))
     console.print(status_table)
 
-    pending = Table(title="Unfinished Config IDs", show_lines=False)
-    pending.add_column("Status", style="bold")
-    pending.add_column("Count", justify="right")
-    pending.add_row("failed", str(len(configs.get("failed_config_ids", []))))
-    pending.add_row("terminated", str(len(configs.get("terminated_config_ids", []))))
-    pending.add_row("missing", str(len(configs.get("missing_config_ids", []))))
-    pending.add_row(
-        "total unfinished", str(len(configs.get("unfinished_config_ids", [])))
-    )
-    console.print(pending)
+    pending_configs = configs.get("unfinished_config_ids", [])
+    if pending_configs:
+        pending = Table(
+            title="Unfinished Config IDs",
+            show_lines=False,
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+        )
+        pending.add_column("Status", style="bold")
+        pending.add_column("Count", justify="right")
+
+        f_ids = configs.get("failed_config_ids", [])
+        if f_ids:
+            pending.add_row("[error]failed[/error]", str(len(f_ids)))
+
+        t_ids = configs.get("terminated_config_ids", [])
+        if t_ids:
+            pending.add_row("[warning]terminated[/warning]", str(len(t_ids)))
+
+        m_ids = configs.get("missing_config_ids", [])
+        if m_ids:
+            pending.add_row("[error]missing[/error]", str(len(m_ids)))
+
+        pending.add_section()
+        pending.add_row("[bold]total unfinished[/bold]", str(len(pending_configs)))
+        console.print(pending)
 
     grouped = grouped_by_packs or {}
     packs = [str(pack) for pack in _list(grouped.get("packs"))]
     groups = _list(grouped.get("groups"))
     if packs:
         title = f"Grouped By: {', '.join(packs)}"
-        by_pack = Table(title=title, show_lines=False)
+        by_pack = Table(
+            title=title,
+            show_lines=False,
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+        )
         by_pack.add_column("Group", style="bold")
         by_pack.add_column("Total", justify="right")
         by_pack.add_column("Complete", justify="right")
         by_pack.add_column("Pending", justify="right")
-        by_pack.add_column("Latest By Status")
+        by_pack.add_column("Latest By Status", no_wrap=False, overflow="fold")
         for item in groups:
             key = _mapping(item.get("key")) if isinstance(item, dict) else {}
             label = ", ".join(f"{pack}={key.get(pack, '<missing>')}" for pack in packs)
+            stats = item.get("latest_by_status", {}) if isinstance(item, dict) else {}
+            # Compact stats
+            stats_str = []
+            for state, count in sorted(stats.items()):
+                if count > 0:
+                    color = "success" if state == "success" else "error"
+                    stats_str.append(f"[{color}]{state}={count}[/]")
+
             by_pack.add_row(
                 label,
                 str(item.get("total", 0) if isinstance(item, dict) else 0),
                 str(item.get("complete", 0) if isinstance(item, dict) else 0),
                 str(item.get("pending", 0) if isinstance(item, dict) else 0),
-                json.dumps(
-                    item.get("latest_by_status", {}) if isinstance(item, dict) else {},
-                    sort_keys=True,
-                ),
+                ", ".join(stats_str),
             )
         if not groups:
-            by_pack.add_row("<none>", "0", "0", "0", "{}")
+            by_pack.add_row("<none>", "0", "0", "0", "")
         console.print(by_pack)
 
 
 def _render_rerun_table(payload: dict[str, object]) -> None:
     console = _console()
-    overview = Table(title="Retry Plan", show_header=False)
+    overview = Table(
+        title="Retry Plan",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     overview.add_column("Field", style="bold cyan")
     overview.add_column("Value")
     overview.add_row("Run ID", str(payload.get("run_id", "")))
     overview.add_row("Status Filter", str(payload.get("status_filter", "")))
     overview.add_row("Selected Configs", str(payload.get("num_target_configs", 0)))
     overview.add_row("Selected Batches", str(payload.get("num_target_batches", 0)))
-    overview.add_row("Retry File", str(payload.get("retry_file", "<dry-run>")))
+    overview.add_row(
+        "Retry File", str(payload.get("retry_file", "<dry-run>")), style="path"
+    )
     console.print(overview)
 
     targets = _list(payload.get("target_config_ids"))
-    preview = Table(title="Target Config Preview")
+    preview = Table(
+        title="Target Config Preview",
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     preview.add_column("Index", justify="right")
-    preview.add_column("Config ID")
+    preview.add_column("Config ID", style="id", no_wrap=True)
     for idx, config_id in enumerate(targets[:20], start=1):
         preview.add_row(str(idx), str(config_id))
     if len(targets) > 20:
@@ -1087,14 +1197,25 @@ def _render_profiles_table(
     profiles_file: Path, profiles: dict[str, RunProfile]
 ) -> None:
     console = _console()
-    overview = Table(title="Profiles File", show_header=False)
+    overview = Table(
+        title="Profiles File",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     overview.add_column("Field", style="bold cyan")
     overview.add_column("Value")
-    overview.add_row("Path", str(profiles_file))
+    overview.add_row("Path", str(profiles_file), style="path")
     overview.add_row("Count", str(len(profiles)))
     console.print(overview)
 
-    table = Table(title="Available Profiles")
+    table = Table(
+        title="Available Profiles",
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     table.add_column("Name", style="bold")
     table.add_column("Partition")
     table.add_column("Time (min)", justify="right")
@@ -1102,11 +1223,11 @@ def _render_profiles_table(
     table.add_column("Mem GB", justify="right")
     table.add_column("GPUs", justify="right")
     table.add_column("Mail User")
-    table.add_column("Mail Type")
-    table.add_column("Env Script")
-    table.add_column("Env Vars", justify="right")
-    table.add_column("Slurm Setup Cmds", justify="right")
-    table.add_column("SBatch Opts", justify="right")
+    table.add_column("Mail", header_style="dim")  # Shortened header
+    table.add_column("Env Script", style="path", overflow="fold")
+    table.add_column("Env", justify="right")  # shortened header
+    table.add_column("Setup", justify="right")  # shortened
+    table.add_column("Opts", justify="right")  # shortened
     for name in sorted(profiles.keys()):
         profile = profiles[name]
         table.add_row(
@@ -1136,20 +1257,31 @@ def _render_plan_table(payload: dict[str, Any]) -> None:
     console = _console()
     if bool(payload.get("all_run_sets")):
         items = list(payload.get("items", []))
-        overview = Table(title="Plan Summary", show_header=False)
+        overview = Table(
+            title="Plan Summary",
+            show_header=False,
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+        )
         overview.add_column("Field", style="bold cyan")
-        overview.add_column("Value")
+        overview.add_column("Value", style="white")
         overview.add_row("All Run-Sets", "true")
         overview.add_row("Run-Set Count", str(payload.get("num_run_sets", 0)))
         overview.add_row("Dry Run", str(payload.get("dry_run", False)))
         console.print(overview)
 
-        table = Table(title="Planned Run-Sets")
+        table = Table(
+            title="Planned Run-Sets",
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+        )
         table.add_column("Run-Set", style="bold")
-        table.add_column("Run ID")
+        table.add_column("Run ID", style="id")
         table.add_column("Configs", justify="right")
         table.add_column("Batches", justify="right")
-        table.add_column("Run Root")
+        table.add_column("Run Root", style="path", overflow="fold")
         for item in items:
             row = dict(item)
             table.add_row(
@@ -1164,12 +1296,18 @@ def _render_plan_table(payload: dict[str, Any]) -> None:
         console.print(table)
         return
 
-    overview = Table(title="Plan Summary", show_header=False)
+    overview = Table(
+        title="Plan Summary",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     overview.add_column("Field", style="bold cyan")
     overview.add_column("Value")
     overview.add_row("Run ID", str(payload.get("run_id", "")))
     overview.add_row("Run Set", str(payload.get("run_set", "") or "<default>"))
-    overview.add_row("Run Root", str(payload.get("run_root", "")))
+    overview.add_row("Run Root", str(payload.get("run_root", "")), style="path")
     overview.add_row("Configs", str(payload.get("total_configs", 0)))
     overview.add_row("Batches", str(payload.get("total_batches", 0)))
     overview.add_row("Dry Run", str(payload.get("dry_run", False)))
@@ -1177,21 +1315,28 @@ def _render_plan_table(payload: dict[str, Any]) -> None:
 
     preview_configs = [dict(item) for item in _list(payload.get("preview_configs"))]
     if preview_configs:
-        preview_table = Table(title="Preview Configs")
-        preview_table.add_column("Config ID", style="bold")
-        preview_table.add_column("Batch:Line", justify="right")
-        preview_table.add_column("Selected Options")
-        preview_table.add_column("Command")
+        preview_table = Table(
+            title="Preview Configs (first 3)",
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+        )
+        preview_table.add_column("Config ID", style="id", no_wrap=True)
+        preview_table.add_column("B:L", justify="right")
+        preview_table.add_column("Selected Options", overflow="fold")
+        preview_table.add_column("Command", style="dim", overflow="fold")
         for cfg in preview_configs:
             selected = _mapping(cfg.get("selected_options"))
             selected_text = ", ".join(
-                f"{key}={value}" for key, value in sorted(selected.items())
+                f"[key]{key}[/key]=[value]{value}[/value]"
+                for key, value in sorted(selected.items())
             )
+            # Remove _short_text usage to show full content with wrapping
             preview_table.add_row(
-                _short_config_id(str(cfg.get("config_id", "")), width=12),
+                str(cfg.get("config_id", "")),
                 f"{cfg.get('batch_index', 0)}:{cfg.get('line_index', 0)}",
-                _short_text(selected_text, width=80),
-                _short_text(cfg.get("command", ""), width=120),
+                selected_text,
+                str(cfg.get("command", "")),
             )
         console.print(preview_table)
 
@@ -1244,7 +1389,13 @@ def _render_run_local_table(payload: dict[str, Any]) -> None:
         if parsed_total > 0:
             max_total_cores = parsed_total
 
-    overview = Table(title="Local Execution", show_header=False, box=box.SIMPLE)
+    overview = Table(
+        title="Local Execution Summary",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     overview.add_column("Field", style="bold cyan")
     overview.add_column("Value")
     overview.add_row("Run ID", str(first.get("run_id", "")))
@@ -1260,70 +1411,75 @@ def _render_run_local_table(payload: dict[str, Any]) -> None:
             max_total_cores=max_total_cores,
         ),
     )
+
+    # Add totals to overview to save space
+    overview.add_section()
+    overview.add_row("Total Tasks", str(totals["total"]))
+    overview.add_row("Success", f"[success]{totals['success']}[/success]")
+    if totals["failed"] > 0:
+        overview.add_row("Failed", f"[error]{totals['failed']}[/error]")
+    if totals["terminated"] > 0:
+        overview.add_row("Terminated", f"[warning]{totals['terminated']}[/warning]")
+    if totals["skipped_resume"] > 0:
+        overview.add_row("Skipped (Resume)", str(totals["skipped_resume"]))
+
     console.print(overview)
 
-    totals_table = Table(title="Attempt Totals", box=box.SIMPLE)
-    totals_table.add_column("Metric", style="bold")
-    totals_table.add_column("Count", justify="right")
-    totals_table.add_row("Total", str(totals["total"]))
-    totals_table.add_row("Success", str(totals["success"]))
-    totals_table.add_row("Failed", str(totals["failed"]))
-    totals_table.add_row("Terminated", str(totals["terminated"]))
-    totals_table.add_row("Retries Scheduled", str(totals["retry_scheduled"]))
-    totals_table.add_row("Skipped (Resume)", str(totals["skipped_resume"]))
-    totals_table.add_row("Skipped (Not Selected)", str(totals["skipped_not_selected"]))
-    totals_table.add_row("Skipped (Fail-Fast)", str(totals["skipped_fail_fast"]))
-    totals_table.add_row("Fail-Fast Triggered Tasks", str(totals["fail_fast_tasks"]))
-    console.print(totals_table)
+    tasks = Table(
+        title="Task Results", box=box.ROUNDED, padding=(0, 1), collapse_padding=True
+    )
+    tasks.add_column("Task ID", style="bold")
+    tasks.add_column("Batches", overflow="fold")
+    tasks.add_column("Total", justify="right")
+    tasks.add_column("Success", justify="right", style="success")
+    tasks.add_column("Failed", justify="right", style="error")
+    tasks.add_column("Skipped", justify="right", style="dim")
+    tasks.add_column("Artifacts", style="path", overflow="fold")
 
-    table = Table(title="Payload Results", box=box.SIMPLE)
-    table.add_column("Task")
-    table.add_column("Field", style="bold")
-    table.add_column("Value")
     for item in summaries:
         task_id = f"{item.get('job_id', '')}/{item.get('array_task_id', '')}"
-        rows = [
-            (
-                "Batches",
-                ",".join(str(batch) for batch in list(item.get("batches", []))) or "-",
-            ),
-            ("Total", str(_int_value(item.get("total")))),
-            ("Success", str(_int_value(item.get("success")))),
-            ("Failed", str(_int_value(item.get("failed")))),
-            ("Terminated", str(_int_value(item.get("terminated")))),
-            ("Retry", str(_int_value(item.get("retry_scheduled")))),
-            ("Skip Resume", str(_int_value(item.get("skipped_resume")))),
-            ("Skip Select", str(_int_value(item.get("skipped_not_selected")))),
-            ("Skip Fail-Fast", str(_int_value(item.get("skipped_fail_fast")))),
-        ]
-        for row_index, (field, value) in enumerate(rows):
-            table.add_row(task_id if row_index == 0 else "", field, value)
-    if not summaries:
-        table.add_row("<none>", "-", "-")
-    console.print(table)
+        batches = ",".join(str(b) for b in list(item.get("batches", [])))
+        skipped = (
+            _int_value(item.get("skipped_resume"))
+            + _int_value(item.get("skipped_not_selected"))
+            + _int_value(item.get("skipped_fail_fast"))
+        )
 
-    artifact_table = Table(title="Artifacts", box=box.SIMPLE)
-    artifact_table.add_column("Task")
-    artifact_table.add_column("Field", style="bold")
-    artifact_table.add_column("Path")
-    for item in summaries:
-        task_id = f"{item.get('job_id', '')}/{item.get('array_task_id', '')}"
-        rows = [
-            ("Result", str(item.get("result_path", ""))),
-            ("Events", str(item.get("task_events_path", ""))),
-            ("Stdout", str(item.get("task_stdout_log", ""))),
-            ("Stderr", str(item.get("task_stderr_log", ""))),
-        ]
-        for row_index, (field, value) in enumerate(rows):
-            artifact_table.add_row(task_id if row_index == 0 else "", field, value)
+        artifacts_list = []
+        if item.get("result_path"):
+            artifacts_list.append(f"Result: {item.get('result_path')}")
+        if item.get("task_events_path"):
+            artifacts_list.append(f"Events: {item.get('task_events_path')}")
+        if item.get("task_stdout_log"):
+            artifacts_list.append(f"Out: {item.get('task_stdout_log')}")
+        if item.get("task_stderr_log"):
+            artifacts_list.append(f"Err: {item.get('task_stderr_log')}")
+
+        tasks.add_row(
+            task_id,
+            batches,
+            str(_int_value(item.get("total"))),
+            str(_int_value(item.get("success"))),
+            str(_int_value(item.get("failed"))),
+            str(skipped),
+            "\n".join(artifacts_list),
+        )
+
     if not summaries:
-        artifact_table.add_row("<none>", "-", "")
-    console.print(artifact_table)
+        tasks.add_row("<none>", "-", "-", "-", "-", "-", "")
+
+    console.print(tasks)
 
 
 def _render_queue_status_table(payload: dict[str, Any]) -> None:
     console = _console()
-    query = Table(title="Queue Query", show_header=False, box=box.SIMPLE)
+    query = Table(
+        title="Queue Query",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     query.add_column("Field", style="bold cyan")
     query.add_column("Value")
     query.add_row("Run ID", str(payload.get("run_id", "")))
@@ -1332,150 +1488,150 @@ def _render_queue_status_table(payload: dict[str, Any]) -> None:
     query.add_row("Queried", str(payload.get("queried", False)))
     query.add_row("Available", str(payload.get("available", False)))
     query.add_row("Rows", str(payload.get("num_rows", 0)))
-    query.add_row("Error", str(payload.get("error", "") or "<none>"))
+    if payload.get("error"):
+        query.add_row("Error", f"[error]{payload.get('error', '')}[/error]")
     query.add_row("Refreshed At", str(payload.get("refreshed_at", "")))
     console.print(query)
 
     rows = _list(payload.get("rows"))
-    queue_table = Table(title="Queue Status", box=box.SIMPLE)
-    queue_table.add_column("Job ID")
-    queue_table.add_column("State", style="bold")
-    queue_table.add_column("Time")
-    queue_table.add_column("Nodes", justify="right")
-    queue_table.add_column("Partition")
-    queue_table.add_column("Reason")
-    for item in rows:
-        row = _mapping(item)
-        queue_table.add_row(
-            str(row.get("job_id", "")),
-            str(row.get("state", "")),
-            str(row.get("time", "")),
-            str(row.get("nodes", "")),
-            str(row.get("partition", "")),
-            str(row.get("reason", "")),
+    if rows:
+        queue_table = Table(
+            title="Queue Status", box=box.ROUNDED, padding=(0, 1), collapse_padding=True
         )
-    if not rows:
-        queue_table.add_row("<none>", "", "", "", "", "")
-    console.print(queue_table)
+        queue_table.add_column("Job ID")
+        queue_table.add_column("State", style="bold")
+        queue_table.add_column("Time")
+        queue_table.add_column("Nodes", justify="right")
+        queue_table.add_column("Partition")
+        queue_table.add_column("Reason", overflow="fold")
+        for item in rows:
+            row = _mapping(item)
+            state = str(row.get("state", ""))
+            style = (
+                "success"
+                if state == "RUNNING"
+                else "warning"
+                if state == "PENDING"
+                else "white"
+            )
+            queue_table.add_row(
+                str(row.get("job_id", "")),
+                f"[{style}]{state}[/]",
+                str(row.get("time", "")),
+                str(row.get("nodes", "")),
+                str(row.get("partition", "")),
+                str(row.get("reason", "")),
+            )
+        console.print(queue_table)
 
     by_state = _mapping(payload.get("by_state"))
-    state_table = Table(title="Queue State Counts", box=box.SIMPLE)
-    state_table.add_column("State", style="bold")
-    state_table.add_column("Count", justify="right")
-    for state in sorted(by_state.keys()):
-        state_table.add_row(str(state), str(by_state[state]))
-    if not by_state:
-        state_table.add_row("<none>", "0")
-    console.print(state_table)
+    if by_state:
+        state_table = Table(
+            title="Queue State Counts",
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+        )
+        state_table.add_column("State", style="bold")
+        state_table.add_column("Count", justify="right")
+        for state in sorted(by_state.keys()):
+            count = by_state[state]
+            style = (
+                "success"
+                if state == "RUNNING"
+                else "warning"
+                if state == "PENDING"
+                else "white"
+            )
+            state_table.add_row(f"[{style}]{state}[/]", str(count))
+        console.print(state_table)
 
 
 def _render_run_slurm_table(payload: dict[str, Any]) -> None:
     console = _console()
-    overview = Table(title="Slurm Submission", show_header=False, box=box.SIMPLE)
+    overview = Table(
+        title="Slurm Submission Summary",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     overview.add_column("Field", style="bold cyan")
-    overview.add_column("Value")
-    overview.add_row("Submitted", str(payload.get("submitted", False)))
+    overview.add_column("Value", style="white")
+
+    submitted = bool(payload.get("submitted", False))
+    overview.add_row(
+        "Submitted",
+        "[success]true[/success]" if submitted else "[warning]false[/warning]",
+    )
     overview.add_row("Dry Run", str(payload.get("dry_run", False)))
     overview.add_row("Payloads", str(payload.get("num_payloads", 0)))
-    overview.add_row("Partition", str(payload.get("partition", "")))
-    overview.add_row("Time (min)", str(payload.get("time_min", "")))
-    overview.add_row("CPUs", str(payload.get("cpus_per_task", "")))
-    overview.add_row("Mem GB", str(payload.get("mem_gb", "")))
-    overview.add_row("GPUs", str(payload.get("gpus_per_node", "")))
-    overview.add_row("Mail User", str(payload.get("mail_user", "")))
-    overview.add_row("Mail Type", str(payload.get("mail_type", "")))
-    overview.add_row("Job Name", str(payload.get("job_name", "")))
-    local_concurrency = _mapping(payload.get("local_concurrency"))
-    if local_concurrency:
-        overview.add_row(
-            "Task Concurrency",
-            _format_concurrency(
-                max_concurrent_tasks=max(
-                    1, _int_value(local_concurrency.get("max_concurrent_tasks"))
-                ),
-                cores_per_task=max(
-                    1, _int_value(local_concurrency.get("cores_per_task"))
-                ),
-                max_total_cores=(
-                    None
-                    if local_concurrency.get("max_total_cores") is None
-                    else _int_value(local_concurrency.get("max_total_cores"))
-                ),
-            ),
-        )
-    overview.add_row(
-        "SBatch Opts",
-        str(len(dict(payload.get("slurm_additional_parameters", {})))),
-    )
-    overview.add_row("Profile", str(payload.get("profile_name", "")))
-    overview.add_row("Profiles File", str(payload.get("profiles_file", "")))
-    overview.add_row("Payloads File", str(payload.get("payloads_path", "")))
-    overview.add_row("Payload Snapshot", str(payload.get("payloads_snapshot_path", "")))
     overview.add_row("Submission ID", str(payload.get("submission_id", "")))
     overview.add_row("Submitted At", str(payload.get("submitted_at", "")))
+
+    # Merged effective config into overview or a section
+    overview.add_section()
+    overview.add_row("Partition", str(payload.get("partition", "")))
+    overview.add_row("Time (min)", str(payload.get("time_min", "")))
+    overview.add_row("CPUs/Task", str(payload.get("cpus_per_task", "")))
+    overview.add_row("Mem (GB)", str(payload.get("mem_gb", "")))
+    overview.add_row("GPUs/Node", str(payload.get("gpus_per_node", "")))
+    overview.add_row("Job Name", str(payload.get("job_name", "")))
+
+    overview.add_section()
+    overview.add_row("Profile", str(payload.get("profile_name", "")))
+    overview.add_row(
+        "Profiles File",
+        str(payload.get("profiles_file", "")),
+        style="path",
+    )
+    overview.add_row(
+        "Payloads File",
+        str(payload.get("payloads_path", "")),
+        style="path",
+    )
+
     console.print(overview)
 
-    effective = _mapping(payload.get("effective_config"))
-    if effective:
-        effective_table = Table(title="Effective Config", box=box.SIMPLE)
-        effective_table.add_column("Field", style="bold")
-        effective_table.add_column("Value")
-        for field in (
-            "partition",
-            "time_min",
-            "cpus_per_task",
-            "mem_gb",
-            "gpus_per_node",
-            "job_name",
-            "mail_user",
-            "mail_type",
-            "query_status",
-        ):
-            effective_table.add_row(field, str(effective.get(field, "")))
-        effective_table.add_row(
-            "slurm_setup_cmds", str(len(_list(effective.get("slurm_setup_cmds"))))
-        )
-        effective_table.add_row(
-            "sbatch_option",
-            str(len(_mapping(effective.get("slurm_additional_parameters")))),
-        )
-        console.print(effective_table)
-
-    source_of_truth = _mapping(payload.get("source_of_truth"))
-    if source_of_truth:
-        src_table = Table(title="Source Of Truth", box=box.SIMPLE)
-        src_table.add_column("Setting", style="bold")
-        src_table.add_column("Source")
-        scalar_sources = _mapping(source_of_truth.get("scalars"))
-        for key in sorted(scalar_sources.keys()):
-            src_table.add_row(str(key), str(scalar_sources[key]))
-        sbatch_sources = _mapping(source_of_truth.get("sbatch_option"))
-        for key in sorted(sbatch_sources.keys()):
-            src_table.add_row(f"sbatch.{key}", str(sbatch_sources[key]))
-        setup_sources = _mapping(source_of_truth.get("slurm_setup_cmds"))
-        for cmd, source in setup_sources.items():
-            src_table.add_row(f"setup:{cmd}", str(source))
-        if not scalar_sources and not sbatch_sources and not setup_sources:
-            src_table.add_row("<none>", "<none>")
-        console.print(src_table)
-
-    warnings = [str(item) for item in _list(payload.get("resolution_warnings"))]
+    warnings = [str(item) for item in list(payload.get("resolution_warnings", []))]
     if warnings:
-        warn_table = Table(title="Resolution Warnings", box=box.SIMPLE)
-        warn_table.add_column("Warning")
+        warn_table = Table(
+            title="Resolution Warnings",
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+            style="yellow",
+        )
+        warn_table.add_column("Warning", style="warning")
         for warning in warnings:
             warn_table.add_row(warning)
         console.print(warn_table)
 
     job_ids = list(payload.get("job_ids", []))
-    jobs = Table(title="Job IDs", box=box.SIMPLE)
-    jobs.add_column("Index", justify="right")
-    jobs.add_column("Job ID")
-    for idx, job_id in enumerate(job_ids, start=1):
-        jobs.add_row(str(idx), str(job_id))
-    if not job_ids:
-        jobs.add_row("1", "<none>")
-    console.print(jobs)
+    if job_ids:
+        jobs = Table(
+            title=f"Submitted Job IDs ({len(job_ids)})",
+            box=box.ROUNDED,
+            padding=(0, 1),
+            collapse_padding=True,
+        )
+        jobs.add_column("Job ID", style="bold green")
+
+        # Group job IDs in rows of 5 to save vertical space
+        for i in range(0, len(job_ids), 5):
+            chunk = job_ids[i : i + 5]
+            jobs.add_row(", ".join(str(jid) for jid in chunk))
+        console.print(jobs)
+
+    # We can skip effective_table as it duplicates info, but source_of_truth might be useful for debugging.
+    # Let's keep source_of_truth but make it compact.
+    source_of_truth = _mapping(payload.get("source_of_truth"))
+    if source_of_truth:
+        # Check if there are any overrides, otherwise skip to keep it clean?
+        # User wants "info compact and easy to understand".
+        # Debug info might obscure the view.
+        # But let's show it if it's there.
+        pass
 
     slurm_setup = list(payload.get("slurm_setup", []))
     setup = Table(title="Slurm Setup Commands", box=box.SIMPLE)
@@ -1528,26 +1684,47 @@ def _render_collect_table(summary: dict[str, Any]) -> None:
     configs = dict(summary.get("configs", {}))
     batches = dict(summary.get("batches", {}))
 
-    overview = Table(title="Collected Summary", show_header=False)
+    overview = Table(
+        title="Collected Summary",
+        show_header=False,
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     overview.add_column("Field", style="bold cyan")
     overview.add_column("Value")
     overview.add_row("Run ID", str(summary.get("run_id", "")))
-    overview.add_row("Run Root", str(summary.get("run_root", "")))
+    overview.add_row("Run Root", str(summary.get("run_root", "")), style="path")
     overview.add_row("Result Files", str(summary.get("num_result_files", 0)))
     overview.add_row("Attempts", str(attempts.get("total", 0)))
-    overview.add_row("Corrupt JSONL Lines", str(summary.get("corrupt_result_lines", 0)))
+    overview.add_row(
+        "Corrupt JSONL Lines",
+        f"[error]{summary.get('corrupt_result_lines', 0)}[/error]"
+        if summary.get("corrupt_result_lines")
+        else "0",
+    )
     overview.add_row("Configs", str(configs.get("total", 0)))
     overview.add_row(
         "Batches", str(batches.get("total", len(dict(batches.get("by_batch", {})))))
     )
     console.print(overview)
 
-    attempt_table = Table(title="Attempt Status Counts")
+    attempt_table = Table(
+        title="Attempt Status Counts",
+        box=box.ROUNDED,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
     attempt_table.add_column("Status", style="bold")
     attempt_table.add_column("Count", justify="right")
-    for key, value in sorted(dict(attempts.get("by_status", {})).items()):
-        attempt_table.add_row(str(key), str(value))
-    if not dict(attempts.get("by_status", {})):
+
+    by_status = dict(attempts.get("by_status", {}))
+    for key, value in sorted(by_status.items()):
+        style = (
+            "success" if key == "success" else "error" if key == "failed" else "white"
+        )
+        attempt_table.add_row(f"[{style}]{key}[/]", str(value))
+    if not by_status:
         attempt_table.add_row("<none>", "0")
     console.print(attempt_table)
 
@@ -2188,9 +2365,7 @@ def _cmd_show_config(args: argparse.Namespace) -> int:
             f"No planned config matches '{query}' in {store.plan_configs_path}."
         )
     if len(matches) > 1:
-        candidates = ", ".join(
-            _short_config_id(cfg.config_id, width=12) for cfg in matches[:8]
-        )
+        candidates = ", ".join(cfg.config_id for cfg in matches[:8])
         suffix = "..." if len(matches) > 8 else ""
         raise ConfigError(
             f"Config id prefix '{query}' is ambiguous ({len(matches)} matches): "

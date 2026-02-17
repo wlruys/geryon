@@ -10,9 +10,13 @@ Options:
   --out-dir <dir>           Output root (default: <example-dir>/outputs)
   --run-id <id>             Run id (default: <example>_<timestamp>_<pid>)
   --batch-size <n>          Planner batch size (default: 8)
-  --profile <name>          Optional profile name for launch/run-local
+  --backend <name>          Execution backend: local|slurm (default: local)
+  --profile <name>          Optional profile name for launch/run stage
   --profiles-file <path>    Optional profiles file path
   --run-set <name>          Optional run-set name
+  --format <name>           Output format: table|json (default: table)
+  --dry-run                 Enable dry-run where supported
+  --query-status            Query queue status for slurm execution
   --stages <csv>            Comma-separated stages: launch|validate|plan|run (default: launch)
   --expect-plan-failure     Expect plan stage to fail (requires --stages plan)
   --python-bin <path>       Python executable (default: $PYTHON_BIN or python3)
@@ -24,8 +28,12 @@ OUT_DIR=""
 RUN_ID=""
 RUN_SET=""
 BATCH_SIZE="8"
+BACKEND="local"
 PROFILE_NAME=""
 PROFILES_FILE=""
+FORMAT="table"
+DRY_RUN=0
+QUERY_STATUS=0
 STAGES="launch"
 EXPECT_PLAN_FAILURE=0
 PYTHON_BIN="${PYTHON_BIN:-python3}"
@@ -52,6 +60,10 @@ while [[ $# -gt 0 ]]; do
       BATCH_SIZE="$2"
       shift 2
       ;;
+    --backend)
+      BACKEND="$2"
+      shift 2
+      ;;
     --profile)
       PROFILE_NAME="$2"
       shift 2
@@ -59,6 +71,18 @@ while [[ $# -gt 0 ]]; do
     --profiles-file)
       PROFILES_FILE="$2"
       shift 2
+      ;;
+    --format)
+      FORMAT="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    --query-status)
+      QUERY_STATUS=1
+      shift
       ;;
     --stages)
       STAGES="$2"
@@ -92,6 +116,16 @@ fi
 
 if [[ "$EXPECT_PLAN_FAILURE" -eq 1 && "$STAGES" != "plan" ]]; then
   echo "--expect-plan-failure requires --stages plan" >&2
+  exit 2
+fi
+
+if [[ "$BACKEND" != "local" && "$BACKEND" != "slurm" ]]; then
+  echo "--backend must be one of: local, slurm" >&2
+  exit 2
+fi
+
+if [[ "$FORMAT" != "table" && "$FORMAT" != "json" ]]; then
+  echo "--format must be one of: table, json" >&2
   exit 2
 fi
 
@@ -136,7 +170,12 @@ export PYTHONPATH="$REPO_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 CLI=("$PYTHON_BIN" -m geryon)
 
 run_validate() {
-  local cmd=("${CLI[@]}" validate-config --experiment "$EXPERIMENT" --show-diagnostics)
+  local cmd=(
+    "${CLI[@]}" validate-config
+    --experiment "$EXPERIMENT"
+    --show-diagnostics
+    --format "$FORMAT"
+  )
   if [[ -n "$RUN_SET" ]]; then
     cmd+=(--run-set "$RUN_SET")
   fi
@@ -144,7 +183,14 @@ run_validate() {
 }
 
 run_plan() {
-  local cmd=("${CLI[@]}" plan --experiment "$EXPERIMENT" --out "$OUT_DIR" --batch-size "$BATCH_SIZE" --run-id "$RUN_ID")
+  local cmd=(
+    "${CLI[@]}" plan
+    --experiment "$EXPERIMENT"
+    --out "$OUT_DIR"
+    --batch-size "$BATCH_SIZE"
+    --run-id "$RUN_ID"
+    --format "$FORMAT"
+  )
   if [[ -n "$RUN_SET" ]]; then
     cmd+=(--run-set "$RUN_SET")
   fi
@@ -160,21 +206,29 @@ run_plan() {
   "${cmd[@]}"
 }
 
-run_local() {
+run_execute() {
   if [[ ! -d "$RUN_ROOT/plan" ]]; then
     echo "missing plan artifacts under $RUN_ROOT/plan; run the plan stage first" >&2
     exit 1
   fi
 
-  local cmd=(
-    "${CLI[@]}" run-local
-    --run "$RUN_ROOT"
-  )
+  local subcommand="run-local"
+  if [[ "$BACKEND" == "slurm" ]]; then
+    subcommand="run-slurm"
+  fi
+
+  local cmd=("${CLI[@]}" "$subcommand" --run "$RUN_ROOT" --format "$FORMAT")
   if [[ -n "$PROFILE_NAME" ]]; then
     cmd+=(--profile "$PROFILE_NAME")
   fi
   if [[ -n "$PROFILES_FILE" ]]; then
     cmd+=(--profiles-file "$PROFILES_FILE")
+  fi
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    cmd+=(--dry-run)
+  fi
+  if [[ "$QUERY_STATUS" -eq 1 && "$BACKEND" == "slurm" ]]; then
+    cmd+=(--query-status)
   fi
   "${cmd[@]}"
 }
@@ -186,7 +240,8 @@ run_launch() {
     --out "$OUT_DIR"
     --batch-size "$BATCH_SIZE"
     --run-id "$RUN_ID"
-    --backend local
+    --backend "$BACKEND"
+    --format "$FORMAT"
   )
   if [[ -n "$RUN_SET" ]]; then
     cmd+=(--run-set "$RUN_SET")
@@ -196,6 +251,12 @@ run_launch() {
   fi
   if [[ -n "$PROFILES_FILE" ]]; then
     cmd+=(--profiles-file "$PROFILES_FILE")
+  fi
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    cmd+=(--dry-run)
+  fi
+  if [[ "$QUERY_STATUS" -eq 1 && "$BACKEND" == "slurm" ]]; then
+    cmd+=(--query-status)
   fi
   "${cmd[@]}"
 }
@@ -214,7 +275,7 @@ for stage in "${STAGE_ITEMS[@]}"; do
       run_plan
       ;;
     run)
-      run_local
+      run_execute
       ;;
     "")
       ;;

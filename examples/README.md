@@ -1,68 +1,30 @@
 # Examples
 
-Available suites:
+The example suite is split into:
 
-- `common_usage/`: practical patterns — getting started, execution, error handling, composition.
-- `merge_policies/`: merge and policy behavior validation examples.
+- `common_usage/`: five canonical teaching examples for day-to-day workflows.
+- `merge_policies/`: focused examples for merge semantics and policy behavior.
 
-Shared helper scripts are under `geryon/examples/common/`:
+## Teaching Coverage
 
-- `run_example.sh`: wrapper for stage-based example execution (`launch` by default, plus `validate`, `plan`, `run`).
-- `cleanup_example.sh`: remove generated artifacts for one example.
+Across these examples you can learn and practice:
 
-## Shared Profiles
+- Planning and local execution.
+- Dry-run and validation before execution.
+- UI/UX output modes (`table`/`json`, status/report views, progress dashboard via profile defaults).
+- Recovery workflows (`rerun`, `--retry-file`, `recover`).
+- Optional Slurm flows (`run-slurm --dry-run`, `--query-status`, `queue`, `queue-refresh`).
 
-Reusable machine/runtime presets for examples are in:
-
-- `geryon/examples/configs/profiles.yaml`
-- `geryon/examples/configs/env/bootstrap.example.sh`
-
-Inspect available profiles:
+## Quick Start
 
 ```bash
-uv run geryon list-profiles \
-  --profiles-file ./geryon/examples/configs/profiles.yaml
+cd geryon/examples/common_usage/01_basics_and_sweeps
+./launch.sh
 ```
-
-Launch an example locally with a profile:
-
-```bash
-uv run geryon launch \
-  --experiment ./geryon/examples/common_usage/05_hello_world/experiment.yaml \
-  --out ./geryon/examples/common_usage/05_hello_world/outputs \
-  --batch-size 8 \
-  --profiles-file ./geryon/examples/configs/profiles.yaml \
-  --profile local_throughput
-```
-
-Recover failed configs with one command:
-
-```bash
-uv run geryon recover \
-  --run ./geryon/examples/common_usage/05_hello_world/outputs/runs/<run_id> \
-  --profiles-file ./geryon/examples/configs/profiles.yaml \
-  --profile local_throughput
-```
-
-Submit any planned example to Slurm with a profile:
-
-```bash
-uv run geryon run-slurm \
-  --run ./geryon/examples/common_usage/05_hello_world/outputs/runs/<run_id> \
-  --profiles-file ./geryon/examples/configs/profiles.yaml \
-  --profile slurm_gpu_debug
-```
-
-Runtime configuration is profile-driven; adjust profile fields/defaults instead of per-run CLI overrides.
 
 ## Cleanup
 
-Use cleanup scripts to remove generated outputs and execution logs:
-
 ```bash
-# clean all examples
 ./geryon/examples/cleanup.sh
-
-# clean only execution artifacts under outputs/runs/*/exec
 ./geryon/examples/cleanup.sh --exec-only
 ```

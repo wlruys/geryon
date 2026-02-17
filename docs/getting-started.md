@@ -7,10 +7,10 @@ Requirements:
 - Python `>=3.10`
 - `PyYAML`, `rich` (installed from `pyproject.toml`)
 
-Install in this repo:
+Install:
 
 ```bash
-cd /Users/wlruys/workspace/scheduling/geryon/geryon
+cd geryon
 uv sync
 ```
 

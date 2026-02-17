@@ -1,4 +1,0 @@
-groups:
-  core:
-    - ref: optimizer_pack
-    - ref: seed_pack

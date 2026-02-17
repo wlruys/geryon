@@ -1,76 +1,39 @@
 # Common Usage Examples
 
-This suite contains runnable, practical experiment patterns:
+Five canonical, standalone examples that teach the core Geryon workflow.
 
-## Getting Started
+| Directory | Teaches | Local profile |
+| --- | --- | --- |
+| `01_basics_and_sweeps/` | schema basics, packs, cartesian sweeps, defaults/tags | `local_dev` |
+| `02_constraints_and_filtering/` | include/exclude constraints and predicates | `local_throughput` |
+| `03_composition_and_variants/` | imports, groups, and run-set variants | `local_dev` |
+| `04_execution_resilience/` | timeout/retry/fail-fast and progress UI | `local_resiliency` |
+| `05_workflow_and_recovery/` | rerun, retry-file targeting, and recover flow | `local_fail_fast` / `local_recover` |
 
-- `05_hello_world/`: minimal experiment — one pack, two options, two configs.
-- `06_defaults_and_tags/`: shared default parameters and per-option tags.
-- `07_include_exclude/`: include/exclude constraints to prune the cartesian product.
+## Common Operator Commands
 
-## Planning & Validation
+Each example README includes tailored commands for these workflows:
 
-- `08_dry_run_and_validation/`: `validate-config`, `inspect-config`, and `launch --dry-run` before committing.
+- Validation + dry-run planning.
+- UI/UX output modes (`--format table|json`, report/status commands).
+- Optional Slurm submission (`run-slurm --dry-run`) and queue checks (`queue`, `queue-refresh`).
 
-## Execution
+Example queue check commands (after real Slurm submission):
 
-- `09_parallel_execution/`: running configs in parallel with profile defaults (`defaults.run_local.max_concurrent_tasks`).
-
-## Error Handling & Recovery
-
-- `10_timeout_and_retry/`: configure `command_timeout_sec` and `max_retries` in profiles for retry/timeout policy.
-- `11_resume_and_rerun/`: full recovery lifecycle — `launch` → `status` → `recover`.
-- `12_fail_fast/`: configure `max_failures` and `fail_fast_threshold` in profiles to stop early.
-
-## Composition & Advanced Patterns
-
-- `01_reused_packs/`: reusable definitions split across files (`imports`, `option_sets`/`packs`/`groups`).
-- `02_ablation_study/`: baseline + ablation variants with `run_sets`.
-- `03_parameter_sweep/`: plain cartesian hyperparameter sweep.
-- `04_controlled_arch_hparams/`: controlled architecture comparison with matched hyperparameter profiles via `constraints.predicates`.
-- `13_dsl_parameter_sweep_predicates/`: build `experiment.yaml` from `geryon.dsl`, then apply predicate filtering over a parameter sweep.
-
-## Shared Utilities
-
-- `flaky_app.py`: test application that simulates failures, timeouts, and flaky behavior (used by examples 10-12).
-
-All examples that don't use `flaky_app.py` execute the shared dummy app at
-`geryon/examples/common/dummy_hydra_app.py`.
-During execution, geryon also injects `hydra.run.dir=...` so each launched command gets
-a dedicated work directory under `outputs/runs/<run_id>/exec/workdirs/`.
+```bash
+geryon queue --run ./outputs/runs/<run_id>
+geryon queue-refresh --run ./outputs/runs/<run_id>
+```
 
 ## Run One Example
 
 ```bash
-cd geryon/examples/common_usage/05_hello_world
+cd geryon/examples/common_usage/01_basics_and_sweeps
 ./launch.sh
 ```
 
-## Cleanup
+## Suite Cleanup
 
 ```bash
-# from this suite
-./cleanup.sh
-
-# from a single example directory
-./cleanup.sh
-```
-
-## Ablation Run-Sets
-
-`02_ablation_study/experiment.yaml` defines:
-
-- `baseline`
-- `no_augmentation`
-- `no_dropout`
-- `no_aug_no_dropout`
-
-Run a specific variant:
-
-```bash
-uv run geryon plan \
-  --experiment ./geryon/examples/common_usage/02_ablation_study/experiment.yaml \
-  --run-set no_dropout \
-  --out ./geryon/examples/common_usage/02_ablation_study/outputs \
-  --batch-size 8
+./geryon/examples/common_usage/cleanup.sh
 ```

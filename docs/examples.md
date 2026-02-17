@@ -1,46 +1,46 @@
 # Examples
 
-Examples live under `/Users/wlruys/workspace/scheduling/geryon/geryon/examples`.
+Examples live under `examples/`.
 
 ## Suites
 
-- `common_usage/`: typical workflows and operations.
-- `merge_policies/`: merge behavior and conflict cases.
+- `common_usage/`: five canonical workflows for planning, execution, resilience, and recovery.
+- `merge_policies/`: targeted merge-mode and strategy fixtures.
 
 ## Common Usage Map
 
-- `01_reused_packs`: imports + definitions + groups.
-- `02_ablation_study`: run-set variants (`extends`, `replace`).
-- `03_parameter_sweep`: cartesian sweep.
-- `04_controlled_arch_hparams`: predicate-constrained pairings.
-- `05_hello_world`: minimal experiment.
-- `06_defaults_and_tags`: defaults + tag behavior.
-- `07_include_exclude`: include/exclude constraints.
-- `08_dry_run_and_validation`: validate/inspect/launch dry-run flow.
-- `09_parallel_execution`: process executor with parallel workers.
-- `10_timeout_and_retry`: timeout + retry policy.
-- `11_resume_and_rerun`: launch -> status -> recover lifecycle.
-- `12_fail_fast`: max failure count/rate stop policy.
-- `13_dsl_parameter_sweep_predicates`: generate experiment from `geryon.dsl`.
+- `01_basics_and_sweeps`: schema basics, packs, defaults/tags, and cartesian sweeps.
+- `02_constraints_and_filtering`: allowlist/blocklist constraints plus predicates.
+- `03_composition_and_variants`: imports, groups, and `run_sets` variants.
+- `04_execution_resilience`: timeout/retry/fail-fast with progress UI profile defaults.
+- `05_workflow_and_recovery`: rerun selection, retry-file execution, and recover flow.
 
 ## Merge Policy Map
 
-- `01_conflict_behavior`: `merge.mode=merge` resolved via pack priorities.
+- `01_conflict_behavior`: merge-mode conflict resolution with priorities.
 - `02_key_strategies`: path-level merge strategies.
-- `03_intentional_overrides`: intentional override via higher-priority pack.
-- `04_duplicate_pack_extension`: duplicate pack names auto-merge in `mode=merge`.
-- `05_delete_sentinel`: key deletion with custom sentinel.
-- `06_policy_gates`: `merge.mode=none` overlap failure gate.
+- `03_intentional_overrides`: explicit higher-priority overrides.
+- `04_duplicate_pack_extension`: duplicate pack-name extension behavior.
+- `05_delete_sentinel`: deletion via merge sentinel value.
+- `06_policy_gates`: strict merge-mode guardrail behavior.
+
+## Operator Features Demonstrated
+
+Examples include command paths for:
+
+- validation + dry-run,
+- output UX (`--format table|json`, status/report),
+- optional Slurm submission (`run-slurm --dry-run`) and queue status checks.
 
 ## Run an Example
 
 ```bash
-cd /Users/wlruys/workspace/scheduling/geryon/geryon/examples/common_usage/05_hello_world
+cd examples/common_usage/01_basics_and_sweeps
 ./launch.sh
 ```
 
 ## Cleanup
 
 ```bash
-bash /Users/wlruys/workspace/scheduling/geryon/geryon/examples/cleanup.sh
+bash examples/cleanup.sh
 ```

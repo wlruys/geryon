@@ -1,0 +1,52 @@
+schema:
+  version: 4
+
+imports:
+  - path: defs/packs.yaml
+    package: catalog
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+defaults:
+  params:
+    train:
+      epochs: 5
+
+select:
+  packs:
+    - ref: catalog.model_pack
+    - ref: catalog.optimizer_pack
+    - ref: catalog.regularization_pack
+
+run_sets:
+  baseline:
+    replace: {}
+  no_dropout:
+    extends: [baseline]
+    replace:
+      select:
+        packs:
+          - ref: catalog.model_pack
+          - ref: catalog.optimizer_pack
+          - ref: catalog.regularization_pack
+            replace_options: true
+            options:
+              - id: dropout_off
+                params:
+                  train:
+                    dropout: 0.0
+  sgd_only:
+    extends: [baseline]
+    replace:
+      select:
+        packs:
+          - ref: catalog.model_pack
+          - ref: catalog.optimizer_pack
+            replace_options: true
+            options_from:
+              - ref: catalog.optimizers
+                include_ids: [sgd]
+          - ref: catalog.regularization_pack

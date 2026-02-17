@@ -1,42 +1,47 @@
 # Example Runtime Configs
 
-This folder contains reusable runtime profiles for example launches across
-local machines and Slurm clusters.
+Shared profiles used by example suites.
 
 ## Files
 
-- `profiles.yaml`: profile presets consumed by `--profiles-file`.
-- `env/bootstrap.example.sh`: optional shared env bootstrap script referenced by profiles.
+- `profiles.yaml`: reusable profile presets (`local_*`, `slurm_*`).
+- `env/bootstrap.example.sh`: optional environment bootstrap script.
 
 ## Quick Start
-
-List profiles:
 
 ```bash
 uv run geryon list-profiles \
   --profiles-file ./geryon/examples/configs/profiles.yaml
 ```
 
-Use a local profile:
+Local run with profile defaults:
 
 ```bash
 uv run geryon run-local \
-  --run ./geryon/examples/common_usage/05_hello_world/outputs/runs/<run_id> \
+  --run ./geryon/examples/common_usage/01_basics_and_sweeps/outputs/runs/01_basics_and_sweeps_demo \
   --profiles-file ./geryon/examples/configs/profiles.yaml \
   --profile local_dev
 ```
 
-Use a Slurm profile:
+Optional Slurm dry-run:
 
 ```bash
 uv run geryon run-slurm \
-  --run ./geryon/examples/common_usage/05_hello_world/outputs/runs/<run_id> \
+  --run ./geryon/examples/common_usage/01_basics_and_sweeps/outputs/runs/01_basics_and_sweeps_demo \
   --profiles-file ./geryon/examples/configs/profiles.yaml \
-  --profile slurm_cpu_debug
+  --profile slurm_cpu_debug \
+  --dry-run \
+  --format json
 ```
 
-## Site Customization Notes
+Queue status after real submission:
 
-- Update `partition`, `account`, `qos`, `constraint`, and `time_min` per site policy.
-- Replace module commands and environment activation in `bootstrap.example.sh`.
-- Keep secrets out of this repository; inject credentials via environment at runtime.
+```bash
+uv run geryon queue --run ./geryon/examples/common_usage/01_basics_and_sweeps/outputs/runs/01_basics_and_sweeps_demo
+uv run geryon queue-refresh --run ./geryon/examples/common_usage/01_basics_and_sweeps/outputs/runs/01_basics_and_sweeps_demo
+```
+
+## Site Customization
+
+Adjust cluster-specific settings (`partition`, `account`, `qos`, `constraint`, modules)
+for your environment before real Slurm submissions.

@@ -1,0 +1,52 @@
+option_sets:
+  models:
+    - id: mlp_small
+      params:
+        model:
+          name: mlp
+          width: 128
+    - id: mlp_large
+      params:
+        model:
+          name: mlp
+          width: 256
+
+  optimizers:
+    - id: adam
+      params:
+        train:
+          optimizer: adam
+          lr: 0.001
+    - id: sgd
+      params:
+        train:
+          optimizer: sgd
+          lr: 0.01
+
+  regularization:
+    - id: dropout_on
+      params:
+        train:
+          dropout: 0.2
+
+packs:
+  model_pack:
+    name: model
+    options_from:
+      - ref: models
+
+  optimizer_pack:
+    name: optimizer
+    options_from:
+      - ref: optimizers
+
+  regularization_pack:
+    name: regularization
+    options_from:
+      - ref: regularization
+
+groups:
+  core:
+    - ref: model_pack
+    - ref: optimizer_pack
+    - ref: regularization_pack

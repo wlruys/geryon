@@ -6,6 +6,8 @@ import logging
 import os
 from pathlib import Path
 
+from rich.logging import RichHandler
+
 _STREAM_HANDLER_ID = "geryon_stream"
 _FILE_HANDLER_ID = "geryon_file"
 _FORMAT = "ts=%(asctime)s level=%(levelname)s logger=%(name)s msg=%(message)s"
@@ -50,10 +52,16 @@ def setup_logging(*, level: int | None = None) -> None:
     root = logging.getLogger("geryon")
     stream_handler = _get_handler(root, _STREAM_HANDLER_ID)
     if stream_handler is None:
-        stream_handler = logging.StreamHandler()
+        stream_handler = RichHandler(
+            rich_tracebacks=True, markup=True, show_time=False, show_path=False
+        )
         _mark_handler(stream_handler, _STREAM_HANDLER_ID)
         root.addHandler(stream_handler)
-    stream_handler.setFormatter(logging.Formatter(_FORMAT))
+
+    # Only set formatter for non-RichHandler (e.g. if we fell back or user swapped it)
+    if not isinstance(stream_handler, RichHandler):
+        stream_handler.setFormatter(logging.Formatter(_FORMAT))
+
     stream_handler.setLevel(stream_level)
 
     file_path_raw = os.environ.get("GERYON_LOG_FILE", "").strip()

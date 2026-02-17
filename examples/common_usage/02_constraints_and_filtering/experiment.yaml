@@ -1,0 +1,65 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+select:
+  packs:
+    - name: model
+      options:
+        - id: small
+          params:
+            model:
+              name: small
+        - id: large
+          params:
+            model:
+              name: large
+        - id: xl
+          params:
+            model:
+              name: xl
+    - name: batch
+      options:
+        - id: b16
+          params:
+            train:
+              batch_size: 16
+        - id: b64
+          params:
+            train:
+              batch_size: 64
+    - name: optimizer
+      options:
+        - id: adam
+          params:
+            train:
+              optimizer: adam
+        - id: sgd
+          params:
+            train:
+              optimizer: sgd
+
+constraints:
+  include:
+    - when:
+        model: [small, large]
+  exclude:
+    - when:
+        model: [large]
+        batch: [b64]
+  predicates:
+    - id: avoid_tiny_batch_for_sgd
+      args:
+        batch_size:
+          param: train.batch_size
+        optimizer:
+          param: train.optimizer
+      expr:
+        not:
+          and:
+            - eq: ["$batch_size", 16]
+            - eq: ["$optimizer", sgd]

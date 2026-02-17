@@ -1,0 +1,44 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+defaults:
+  params:
+    train:
+      epochs: 3
+  tags:
+    - suite:common_usage
+    - lesson:basics
+
+select:
+  packs:
+    - name: model
+      options:
+        - id: gpt2_small
+          tag: model-small
+          params:
+            model:
+              name: gpt2-small
+              layers: 12
+        - id: gpt2_medium
+          tag: model-medium
+          params:
+            model:
+              name: gpt2-medium
+              layers: 24
+    - name: optimizer
+      options:
+        - id: adam
+          params:
+            train:
+              optimizer: adam
+              lr: 0.001
+        - id: sgd
+          params:
+            train:
+              optimizer: sgd
+              lr: 0.01
