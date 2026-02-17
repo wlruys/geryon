@@ -1,0 +1,65 @@
+# Parallel execution.
+#
+# By default, geryon executes commands sequentially
+# (defaults.run_local.max_concurrent_tasks = 1).
+# Increase defaults.run_local.max_concurrent_tasks in the selected profile
+# to run multiple configs in parallel using the `process` executor.
+#
+# The `process` executor uses multiprocessing.  Each worker picks up
+# the next available command from the batch.  On Linux, you can also
+# pin workers to specific CPU cores with defaults.run_local.cores
+# (e.g. "0-7").
+#
+# This experiment creates 12 configs (3 seeds x 2 lr x 2 batch_size).
+# The launch script runs them with 4 parallel tasks.
+#
+# Run:
+#   ./launch.sh
+
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+defaults:
+  params:
+    model:
+      name: mlp
+      width: 128
+
+select:
+  packs:
+    - name: seed
+      options:
+        - id: s1
+          params:
+            seed: 1
+        - id: s2
+          params:
+            seed: 2
+        - id: s3
+          params:
+            seed: 3
+    - name: lr
+      options:
+        - id: lr_high
+          params:
+            train:
+              lr: 0.01
+        - id: lr_low
+          params:
+            train:
+              lr: 0.001
+    - name: batch_size
+      options:
+        - id: bs32
+          params:
+            train:
+              batch_size: 32
+        - id: bs64
+          params:
+            train:
+              batch_size: 64

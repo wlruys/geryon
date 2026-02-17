@@ -1,0 +1,30 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+defaults:
+  params:
+    wandb:
+      project: scheduler
+      group: baseline
+
+merge:
+  mode: merge
+  delete_sentinel: "__drop__"
+
+select:
+  packs:
+    - name: tracking
+      options:
+        - id: keep_group
+          params:
+            wandb:
+              group: train
+        - id: remove_group
+          params:
+            wandb:
+              group: "__drop__"

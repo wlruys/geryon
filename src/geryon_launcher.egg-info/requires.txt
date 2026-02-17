@@ -1,0 +1,11 @@
+PyYAML>=6.0
+rich>=13.7
+
+[dev]
+pytest>=8.2
+
+[pylauncher]
+pylauncher>=4.0
+
+[slurm]
+submitit>=1.5.2

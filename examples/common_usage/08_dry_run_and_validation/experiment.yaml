@@ -1,0 +1,53 @@
+# Dry-run and validation.
+#
+# Before committing to a full experiment run, you can preview and
+# validate your configuration with three commands:
+#
+#   validate-config  - Check YAML schema and planner normalization.
+#   inspect-config   - Render the fully composed YAML after imports.
+#   plan --dry-run   - Expand the cartesian product and count configs
+#                      without writing any artifacts to disk.
+#
+# This example demonstrates all three.  The launch script runs each
+# validation step before doing the actual `launch` execution.
+#
+# Run:
+#   ./launch.sh
+
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+defaults:
+  params:
+    experiment:
+      project: validation_demo
+
+select:
+  packs:
+    - name: model
+      options:
+        - id: small
+          params:
+            model:
+              size: small
+              hidden: 128
+        - id: large
+          params:
+            model:
+              size: large
+              hidden: 512
+    - name: lr
+      options:
+        - id: high
+          params:
+            train:
+              lr: 0.01
+        - id: low
+          params:
+            train:
+              lr: 0.001

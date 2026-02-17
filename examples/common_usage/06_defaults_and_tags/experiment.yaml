@@ -1,0 +1,67 @@
+# Defaults and tags.
+#
+# `defaults.params` are merged into every generated config.  They provide
+# shared baseline parameters that individual pack options can build on
+# (or override, when merge policies allow it).
+#
+# `defaults.tags` attach metadata labels to every config.  Per-option
+# `tag` fields add option-specific labels.  Tags appear in the planned
+# manifest and can be used for filtering or reporting.
+#
+# This experiment produces 4 configs (2 models x 2 schedulers), each
+# inheriting the default dataset and training parameters plus a
+# project-level tag.
+#
+# Run:
+#   ./launch.sh
+
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+defaults:
+  params:
+    data:
+      dataset: cifar10
+      num_workers: 4
+    train:
+      epochs: 50
+      batch_size: 128
+  tags:
+    - project:demo
+
+select:
+  packs:
+    - name: model
+      options:
+        - id: resnet18
+          tag: arch-resnet
+          params:
+            model:
+              name: resnet18
+              pretrained: false
+        - id: mlp
+          tag: arch-mlp
+          params:
+            model:
+              name: mlp
+              width: 256
+    - name: scheduler
+      options:
+        - id: cosine
+          tag: sched-cosine
+          params:
+            train:
+              scheduler: cosine
+              warmup_epochs: 5
+        - id: step
+          tag: sched-step
+          params:
+            train:
+              scheduler: step
+              step_size: 20
+              gamma: 0.1

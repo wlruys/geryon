@@ -1,0 +1,65 @@
+schema:
+  version: 4
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+select:
+  packs:
+    - name: dataset
+      options:
+        - id: cifar10_aug
+          params:
+            data:
+              name: cifar10
+              augmentation: strong
+    - name: architecture
+      options:
+        - id: resnet18
+          params:
+            model:
+              name: resnet18
+    - name: regularization
+      options:
+        - id: dropout_on
+          params:
+            train:
+              dropout: 0.2
+run_sets:
+  baseline:
+    replace: {}
+  no_augmentation:
+    extends: [baseline]
+    patch_packs:
+      dataset:
+        options:
+          - id: cifar10_noaug
+            params:
+              data:
+                name: cifar10
+                augmentation: none
+  no_dropout:
+    extends: [baseline]
+    patch_packs:
+      regularization:
+        options:
+          - id: dropout_off
+            params:
+              train:
+                dropout: 0.0
+  no_aug_no_dropout:
+    extends: [baseline]
+    patch_packs:
+      dataset:
+        options:
+          - id: cifar10_noaug
+            params:
+              data:
+                name: cifar10
+                augmentation: none
+      regularization:
+        options:
+          - id: dropout_off
+            params:
+              train:
+                dropout: 0.0

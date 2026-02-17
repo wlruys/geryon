@@ -1,0 +1,25 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+merge:
+  mode: none
+
+select:
+  packs:
+    - name: model
+      options:
+        - id: resnet
+          params:
+            model:
+              name: resnet18
+    - name: training
+      options:
+        - id: default
+          params:
+            train:
+              lr: 0.001

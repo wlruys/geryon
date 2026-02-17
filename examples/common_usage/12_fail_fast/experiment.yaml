@@ -1,0 +1,59 @@
+# Fail-fast policies.
+#
+# When running many configs, you may want to stop early if too many
+# are failing.  Geryon supports two fail-fast controls:
+#
+#   defaults.run_local.max_failures: N
+#     Stop after N total failures.
+#   defaults.run_local.fail_fast_threshold: P
+#     Stop when the failure rate exceeds P
+#     (decimal 0-1 or percent, e.g. "50%").
+#
+# Remaining configs are skipped with status "skipped_fail_fast".
+#
+# This experiment has 8 configs, all using fail.mode=always so they
+# fail immediately.  The launch script uses max_failures: 3 in profile
+# defaults, so
+# execution stops after the 3rd failure and the rest are skipped.
+#
+# Run:
+#   ./launch.sh
+
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../flaky_app.py
+
+defaults:
+  params:
+    fail:
+      mode: always
+      exit_code: 1
+
+select:
+  packs:
+    - name: task
+      options:
+        - id: a
+          params:
+            task: a
+        - id: b
+          params:
+            task: b
+        - id: c
+          params:
+            task: c
+        - id: d
+          params:
+            task: d
+    - name: seed
+      options:
+        - id: s1
+          params:
+            seed: 1
+        - id: s2
+          params:
+            seed: 2

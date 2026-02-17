@@ -1,0 +1,29 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+merge:
+  mode: merge
+
+select:
+  packs:
+    - name: model
+      priority: 0
+      options:
+        - id: base
+          params:
+            train:
+              lr: 0.001
+              wd: 0.0
+    - name: optimizer_tweaks
+      priority: 10
+      options:
+        - id: adamw
+          params:
+            train:
+              lr: 0.0005
+              wd: 0.01

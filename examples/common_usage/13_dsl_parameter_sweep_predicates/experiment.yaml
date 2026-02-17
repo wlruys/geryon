@@ -1,0 +1,103 @@
+schema:
+  version: 4
+  unknown_key_behavior: error
+command:
+  program: python3
+  args:
+  - ../../common/dummy_hydra_app.py
+defaults:
+  params:
+    data:
+      dataset: cifar100
+    train:
+      epochs: 50
+  tags:
+  - demo:dsl
+  - demo:predicate_sweep
+select:
+  groups: []
+  packs:
+  - name: model
+    options:
+    - id: resnet18
+      params:
+        model:
+          family: cnn
+          name: resnet18
+    - id: vit_tiny
+      params:
+        model:
+          family: transformer
+          name: vit_tiny
+  - name: train_lr
+    options:
+    - id: lr_0.0001
+      params:
+        train:
+          lr: 0.0001
+    - id: lr_0.0003
+      params:
+        train:
+          lr: 0.0003
+    - id: lr_0.001
+      params:
+        train:
+          lr: 0.001
+    - id: lr_0.003
+      params:
+        train:
+          lr: 0.003
+  - name: batch_size
+    options:
+    - id: bs_64
+      params:
+        train:
+          batch_size: 64
+    - id: bs_128
+      params:
+        train:
+          batch_size: 128
+  - name: seed
+    options:
+    - id: seed_1
+      params:
+        seed: 1
+    - id: seed_2
+      params:
+        seed: 2
+constraints:
+  include: []
+  exclude: []
+  predicates:
+  - id: model_lr_batch_guardrails
+    args:
+      model:
+        pack_id: model
+      lr:
+        param: train.lr
+      batch:
+        param: train.batch_size
+    expr:
+      or:
+      - and:
+        - eq:
+          - $model
+          - resnet18
+        - in:
+          - $lr
+          - - 0.001
+            - 0.003
+        - eq:
+          - $batch
+          - 128
+      - and:
+        - eq:
+          - $model
+          - vit_tiny
+        - in:
+          - $lr
+          - - 0.0001
+            - 0.0003
+        - eq:
+          - $batch
+          - 64

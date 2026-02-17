@@ -1,0 +1,85 @@
+# Include / exclude constraints.
+#
+# Without constraints, the cartesian product of 3 datasets x 3 models
+# x 2 optimizers = 18 configs.  Constraints let you prune unwanted
+# combinations without touching the pack definitions.
+#
+# `constraints.exclude` removes configs where ALL listed conditions
+# match simultaneously.  Each condition maps a pack name to a list of
+# option IDs that trigger the rule.
+#
+# `constraints.include` keeps only configs that satisfy at least one
+# include rule.  When both include and exclude are specified, includes
+# are applied first, then excludes.
+#
+# This example:
+#   - Includes only cifar10 and cifar100 datasets (drops imagenet).
+#   - Excludes the combination of mlp + adamw (MLP works fine with SGD).
+#   - Produces 10 configs instead of 18.
+#
+# Run:
+#   ./launch.sh
+
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+select:
+  packs:
+    - name: dataset
+      options:
+        - id: cifar10
+          params:
+            data:
+              name: cifar10
+              num_classes: 10
+        - id: cifar100
+          params:
+            data:
+              name: cifar100
+              num_classes: 100
+        - id: imagenet
+          params:
+            data:
+              name: imagenet
+              num_classes: 1000
+    - name: model
+      options:
+        - id: resnet18
+          params:
+            model:
+              name: resnet18
+        - id: vit_tiny
+          params:
+            model:
+              name: vit_tiny
+        - id: mlp
+          params:
+            model:
+              name: mlp
+              width: 256
+    - name: optimizer
+      options:
+        - id: sgd
+          params:
+            train:
+              optimizer: sgd
+              lr: 0.01
+        - id: adamw
+          params:
+            train:
+              optimizer: adamw
+              lr: 0.001
+
+constraints:
+  include:
+    - when:
+        dataset: [cifar10, cifar100]
+  exclude:
+    - when:
+        model: [mlp]
+        optimizer: [adamw]

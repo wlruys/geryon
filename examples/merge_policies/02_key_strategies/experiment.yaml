@@ -1,0 +1,41 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+merge:
+  mode: merge
+  strategies:
+    model: deep_merge
+    callbacks: append_unique
+    tags: set_union
+    logging.level: replace
+
+select:
+  packs:
+    - name: base
+      priority: 0
+      options:
+        - id: base
+          params:
+            model:
+              hidden: 256
+              dropout: 0.1
+            callbacks: [checkpoint, lr_monitor]
+            tags: [baseline, vision]
+            logging:
+              level: INFO
+    - name: tweak
+      priority: 10
+      options:
+        - id: tweak
+          params:
+            model:
+              dropout: 0.2
+            callbacks: [checkpoint, grad_norm]
+            tags: [vision, ablation]
+            logging:
+              level: DEBUG

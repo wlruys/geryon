@@ -1,0 +1,35 @@
+option_sets:
+  architectures:
+    - id: mlp_small
+      tag: arch-mlp-small
+      params:
+        model:
+          name: mlp
+          width: 128
+          depth: 3
+    - id: mlp_large
+      tag: arch-mlp-large
+      params:
+        model:
+          name: mlp
+          width: 256
+          depth: 5
+  optimizers:
+    - id: adam
+      params:
+        train:
+          optimizer: adam
+          lr: 0.001
+    - id: adamw
+      params:
+        train:
+          optimizer: adamw
+          lr: 0.0005
+          weight_decay: 0.01
+  seeds:
+    - id: seed1
+      params:
+        seed: 1
+    - id: seed2
+      params:
+        seed: 2

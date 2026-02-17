@@ -1,0 +1,25 @@
+site_name: Geryon
+site_description: Runner for giant experiments using Hydra
+repo_name: geryon
+theme:
+  name: mkdocs
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Experiment YAML:
+      - Schema Reference: experiments.md
+      - Composition and Packs: packs.md
+  - Python DSL: dsl.md
+  - CLI Reference: interface.md
+  - Runtime:
+      - Profiles: profiles.md
+      - Artifacts and Status: runtime-artifacts.md
+  - Python API: python-api.md
+  - Examples: examples.md
+  - Legacy Config Doc: geryon-config.md
+markdown_extensions:
+  - toc:
+      permalink: true
+  - tables
+  - admonition
+  - fenced_code

@@ -1,0 +1,57 @@
+# Timeout and retry.
+#
+# Geryon can automatically retry failed commands and kill commands
+# that exceed a timeout.  This is useful for flaky processes or
+# commands that occasionally hang.
+#
+# This experiment uses flaky_app.py to simulate failures.  The
+# "unreliable" option fails 50% of the time.  The "slow" option
+# sleeps for 5 seconds and gets killed by a 2-second timeout.
+#
+# The launch script uses a profile that sets:
+#   defaults.run_local.command_timeout_sec: 2
+#     Kill any command that runs longer than 2s.
+#   defaults.run_local.max_retries: 2
+#     Retry each failed/terminated command up to
+#     2 additional times (3 total attempts).
+#
+# Run:
+#   ./launch.sh
+
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../flaky_app.py
+
+select:
+  packs:
+    - name: task
+      options:
+        - id: reliable
+          params:
+            task: reliable
+            fail:
+              mode: none
+        - id: unreliable
+          params:
+            task: unreliable
+            fail:
+              mode: random
+              rate: 0.5
+        - id: slow
+          params:
+            task: slow
+            fail:
+              mode: slow
+              sleep_sec: 5
+    - name: seed
+      options:
+        - id: s1
+          params:
+            seed: 1
+        - id: s2
+          params:
+            seed: 2

@@ -1,0 +1,2 @@
+[console_scripts]
+geryon = geryon.cli:main

@@ -1,0 +1,26 @@
+schema:
+  version: 4
+
+command:
+  program: python3
+  args:
+    - ../../common/dummy_hydra_app.py
+
+merge:
+  mode: merge
+
+select:
+  packs:
+    - name: seed
+      options:
+        - id: s1
+          params:
+            seed: 1
+        - id: s2
+          params:
+            seed: 2
+    - name: seed
+      options:
+        - id: s3
+          params:
+            seed: 3
