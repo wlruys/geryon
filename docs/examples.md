@@ -4,7 +4,7 @@ Examples live under `examples/`.
 
 ## Suites
 
-- `common_usage/`: five canonical workflows for planning, execution, resilience, and recovery.
+- `usage/`: five canonical workflows for planning, execution, resilience, and recovery.
 - `merge_policies/`: targeted merge-mode and strategy fixtures.
 
 ## Common Usage Map
@@ -35,7 +35,7 @@ Examples include command paths for:
 ## Run an Example
 
 ```bash
-cd examples/common_usage/01_basics_and_sweeps
+cd examples/usage/01_basics_and_sweeps
 ./launch.sh
 ```
 

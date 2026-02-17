@@ -2,7 +2,7 @@
 
 The example suite is split into:
 
-- `common_usage/`: five canonical teaching examples for day-to-day workflows.
+- `usage/`: five canonical teaching examples for day-to-day workflows.
 - `merge_policies/`: focused examples for merge semantics and policy behavior.
 
 ## Teaching Coverage
@@ -18,7 +18,7 @@ Across these examples you can learn and practice:
 ## Quick Start
 
 ```bash
-cd geryon/examples/common_usage/01_basics_and_sweeps
+cd geryon/examples/usage/01_basics_and_sweeps
 ./launch.sh
 ```
 

@@ -28,12 +28,12 @@ geryon queue-refresh --run ./outputs/runs/<run_id>
 ## Run One Example
 
 ```bash
-cd geryon/examples/common_usage/01_basics_and_sweeps
+cd geryon/examples/usage/01_basics_and_sweeps
 ./launch.sh
 ```
 
 ## Suite Cleanup
 
 ```bash
-./geryon/examples/common_usage/cleanup.sh
+./geryon/examples/usage/cleanup.sh
 ```

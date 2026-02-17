@@ -1,6 +1,8 @@
 # Merge Policy Examples
 
 Each directory is a focused, standalone fixture for one merge behavior.
+Like the `usage` examples, every case now includes its own `profiles.yaml`
+and `env/bootstrap.example.sh` so it can be run independently.
 
 ## Map
 

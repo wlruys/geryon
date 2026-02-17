@@ -11,7 +11,7 @@ defaults:
     train:
       epochs: 3
   tags:
-    - suite:common_usage
+    - suite:usage
     - lesson:basics
 
 select:

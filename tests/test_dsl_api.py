@@ -189,7 +189,7 @@ def test_yaml_patch_packs_plans_end_to_end(tmp_path: Path) -> None:
     experiment_path = (
         Path(__file__).resolve().parents[1]
         / "examples"
-        / "common_usage"
+        / "usage"
         / "02_ablation_study"
         / "experiment.yaml"
     )
