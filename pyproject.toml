@@ -11,6 +11,7 @@ requires-python = ">=3.10"
 dependencies = [
   "PyYAML>=6.0",
   "rich>=13.7",
+  "psutil>=5.9",
 ]
 
 [project.optional-dependencies]

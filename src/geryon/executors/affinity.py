@@ -42,6 +42,31 @@ def has_taskset() -> bool:
     return _is_linux() and shutil.which("taskset") is not None
 
 
+def _discover_psutil_core_pool() -> list[int] | None:
+    try:
+        import psutil
+    except ImportError:
+        return None
+
+    try:
+        process = psutil.Process()
+        affinity = getattr(process, "cpu_affinity", None)
+        if callable(affinity):
+            values = sorted(int(cpu) for cpu in affinity())
+            if values:
+                return values
+    except Exception:
+        pass
+
+    try:
+        cpu_count = psutil.cpu_count(logical=True)
+    except Exception:
+        cpu_count = None
+    if isinstance(cpu_count, int) and cpu_count > 0:
+        return list(range(cpu_count))
+    return None
+
+
 def discover_core_pool(explicit_cores: str | None) -> list[int]:
     for cpulist in (explicit_cores, os.environ.get("CORES")):
         if cpulist:
@@ -49,6 +74,10 @@ def discover_core_pool(explicit_cores: str | None) -> list[int]:
             if not values:
                 raise ValueError("CPU core list resolved to an empty set")
             return values
+
+    psutil_values = _discover_psutil_core_pool()
+    if psutil_values:
+        return psutil_values
 
     if _is_linux() and hasattr(os, "sched_getaffinity"):
         try:

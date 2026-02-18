@@ -26,6 +26,7 @@ venv/
 
 # Runtime/config locals
 profiles.yaml
+!examples/**/profiles.yaml
 *.local.yaml
 
 # Example and run artifacts
