@@ -1,7 +1,7 @@
-"""Python DSL for geryon experiment documents."""
+"""Python interface for geryon experiment documents."""
 
-from geryon.dsl.builders import DSL_API_VERSION, SUPPORTED_SCHEMA_VERSION, Experiment
-from geryon.dsl.specs import (
+from geryon.interface.builders import INTERFACE_API_VERSION, SUPPORTED_SCHEMA_VERSION, Experiment
+from geryon.interface.specs import (
     ConstraintRule,
     DefaultsSpec,
     MergeSpec,
@@ -13,7 +13,7 @@ from geryon.dsl.specs import (
     PredicateArg,
     RunSetSpec,
 )
-from geryon.dsl.templates import (
+from geryon.interface.templates import (
     match_ids,
     pack_map,
     pack_param_linspace,
@@ -23,7 +23,7 @@ from geryon.dsl.templates import (
 )
 
 __all__ = [
-    "DSL_API_VERSION",
+    "INTERFACE_API_VERSION",
     "SUPPORTED_SCHEMA_VERSION",
     "ConstraintRule",
     "DefaultsSpec",

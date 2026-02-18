@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from geryon.dsl import Experiment, Option, Pack, Predicate, PredicateArg, require
+from geryon.interface import Experiment, Option, Pack, Predicate, PredicateArg, require
 from geryon.models import ConfigError
 from geryon.planner import plan_experiment
 from geryon.store import ArtifactStore
@@ -94,7 +94,7 @@ def test_require_shorthand_builds_predicate_and_plans(tmp_path: Path) -> None:
     summary = plan_experiment(
         experiment_path=experiment_path,
         out_dir=tmp_path / "out",
-        run_id="dsl_require",
+        run_id="interface_require",
         batch_size=8,
     )
     assert summary.total_configs == 2
@@ -164,7 +164,7 @@ def test_variant_patch_packs_replaces_only_target_pack(tmp_path: Path) -> None:
     baseline = plan_experiment(
         experiment_path=experiment_path,
         out_dir=tmp_path / "out",
-        run_id="dsl_patch_base",
+        run_id="interface_patch_base",
         batch_size=8,
     )
     assert baseline.total_configs == 2
@@ -172,7 +172,7 @@ def test_variant_patch_packs_replaces_only_target_pack(tmp_path: Path) -> None:
     no_aug = plan_experiment(
         experiment_path=experiment_path,
         out_dir=tmp_path / "out",
-        run_id="dsl_patch_variant",
+        run_id="interface_patch_variant",
         run_set="no_augmentation",
         batch_size=8,
     )
@@ -237,13 +237,13 @@ def test_patch_packs_missing_pack_raises(tmp_path: Path) -> None:
         plan_experiment(
             experiment_path=experiment_path,
             out_dir=tmp_path / "out",
-            run_id="dsl_bad_patch",
+            run_id="interface_bad_patch",
             run_set="bad_patch",
             batch_size=8,
         )
 
 
-def test_dsl_v4_import_and_definition_maps() -> None:
+def test_interface_v4_import_and_definition_maps() -> None:
     exp = (
         Experiment()
         .add_import("defs/shared.yaml", package="common")
@@ -280,7 +280,7 @@ def test_dsl_v4_import_and_definition_maps() -> None:
     assert "package" not in doc
 
 
-def test_dsl_rejects_removed_registry_and_package_keys() -> None:
+def test_interface_rejects_removed_registry_and_package_keys() -> None:
     with pytest.raises(ConfigError, match="registry is removed in schema v4"):
         Experiment.from_dict(
             {

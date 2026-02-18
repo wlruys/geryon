@@ -7,8 +7,8 @@ from typing import Any, Mapping
 
 import yaml
 
-from geryon.dsl.emit import dump_yaml, write_yaml
-from geryon.dsl.specs import (
+from geryon.interface.emit import dump_yaml, write_yaml
+from geryon.interface.specs import (
     ConstraintRule,
     DefaultsSpec,
     MergeSpec,
@@ -18,17 +18,17 @@ from geryon.dsl.specs import (
     Predicate,
     RunSetSpec,
 )
-from geryon.dsl.validate import validate_document
+from geryon.interface.validate import validate_document
 from geryon.models import ConfigError
 
-DSL_API_VERSION = "0.1.0"
+INTERFACE_API_VERSION = "0.1.0"
 SUPPORTED_SCHEMA_VERSION = 4
 
 
 class Experiment:
     """Builder for geryon experiment documents.
 
-    This DSL always lowers into canonical schema-v4 YAML.
+    This interface always lowers into canonical schema-v4 YAML.
     High-level helpers should compile into explicit select/pack/options structures.
     """
 
@@ -452,7 +452,7 @@ class Experiment:
         from geryon.planner import plan_experiment
 
         yaml_text = self.to_yaml(strict=True)
-        with TemporaryDirectory(prefix="geryon_dsl_count_") as tmp_dir:
+        with TemporaryDirectory(prefix="geryon_interface_count_") as tmp_dir:
             tmp_path = Path(tmp_dir)
             experiment_path = tmp_path / "experiment.yaml"
             experiment_path.write_text(yaml_text, encoding="utf-8")
@@ -483,7 +483,7 @@ class Experiment:
         yaml_text = dump_yaml(data, sort_keys=sort_keys)
 
         if validate_with_geryon or max_configs is not None:
-            with TemporaryDirectory(prefix="geryon_dsl_validate_") as tmp_dir:
+            with TemporaryDirectory(prefix="geryon_interface_validate_") as tmp_dir:
                 tmp_path = Path(tmp_dir)
                 tmp_experiment = tmp_path / "experiment.yaml"
                 tmp_experiment.write_text(yaml_text, encoding="utf-8")
@@ -505,7 +505,7 @@ class Experiment:
                     )
                     if int(summary.total_configs) > int(max_configs):
                         raise ConfigError(
-                            "DSL config budget exceeded: "
+                            "interface config budget exceeded: "
                             f"planned {summary.total_configs} configs (max_configs={max_configs})"
                         )
 

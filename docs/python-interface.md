@@ -1,6 +1,6 @@
-# Python DSL (`geryon.dsl`)
+# Python Interface (`geryon.interface`)
 
-`geryon.dsl` builds canonical schema-v4 experiment documents in Python.
+`geryon.interface` builds canonical schema-v4 experiment documents in Python.
 
 Exports:
 

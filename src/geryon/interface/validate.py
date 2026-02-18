@@ -5,7 +5,7 @@ from typing import Any, Mapping
 
 from geryon.models import ConfigError
 
-from geryon.dsl.specs import assert_no_dotted_keys
+from geryon.interface.specs import assert_no_dotted_keys
 
 _ALLOWED_TOP_LEVEL_KEYS = {
     "schema",

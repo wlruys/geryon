@@ -264,8 +264,8 @@ Full docs at `docs/` (build locally with `mkdocs serve`):
 - [Getting Started](docs/getting-started.md) — install and first run
 - [Experiment YAML Schema](docs/experiments.md) — schema-v4 reference
 - [Composition and Packs](docs/packs.md) — `imports`/`option_sets`/`packs`/`groups`/`select`
-- [Python DSL](docs/dsl.md) — `geryon.dsl` API
-- [CLI Reference](docs/interface.md) — every command and flag
+- [Python Interface](docs/python-interface.md) — `geryon.interface` API
+- [CLI Reference](docs/cli-reference.md) — every command and flag
 - [Profiles](docs/profiles.md) — `profiles.yaml` schema and precedence
 - [Runtime Artifacts](docs/runtime-artifacts.md) — on-disk layout and status model
 - [Python API](docs/python-api.md) — programmatic entry points
