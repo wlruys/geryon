@@ -1,242 +1,106 @@
-# CLI Reference
+# Python Interface (`geryon.interface`)
 
-Entry point:
+`geryon.interface` builds canonical schema-v4 experiment documents in Python.
 
-- `geryon` -> `geryon.cli:main`
+Exports:
 
-Deprecated aliases (still accepted):
+- `Experiment`
+- Specs: `Option`, `OptionSource`, `Pack`, `PackSelector`, `DefaultsSpec`, `MergeSpec`, `ConstraintRule`, `PredicateArg`, `Predicate`, `RunSetSpec`
+- Helpers: `pack_map`, `match_ids`, `pack_param_values`, `pack_param_linspace`, `pack_param_logspace`
 
-- `build` -> `plan`
-- `local` -> `run-local`
-- `slurm` -> `run-slurm`
+## Core Builder: `Experiment`
 
-Output modes:
+Key mutators:
 
-- Most commands support `--format table|json`
-- `inspect-config` supports `yaml|json`
-- `report` supports `table|markdown|json`
+- `command(program, *args)`
+- `defaults(params=..., tags=...)`
+- `merge(spec=None, **kwargs)`
+- `select_group(group_ref)`
+- `add_pack(pack)`
+- `add_pack_selector(selector)`
+- `add_pack_ref(...)`
+- `include(...)`, `exclude(...)`, `add_predicate(...)`
+- definition helpers: `add_option_set`, `add_pack_def`, `add_group_def`
+- run sets: `add_run_set`, `run_set`, `variant`
 
-## `plan`
+Emission helpers:
 
-Plan configs and batch files.
+- `to_dict(strict=True)`
+- `to_yaml(strict=True, sort_keys=False)`
+- `to_yaml_file(...)`
 
-Required:
+## Spec Highlights
 
-- `--experiment`
-- `--out`
-- `--batch-size`
+### `Option`
 
-Optional:
+```python
+Option(option_id="resnet18", params={"model": {"name": "resnet18"}}, tag="arch-resnet")
+```
 
-- `--run-id`
-- `--run-set`
-- `--all-run-sets` (mutually exclusive with `--run-set`)
-- `--dry-run`
-- `--format table|json` (default `table`)
+- `option_id` required.
+- `params` required mapping (dotted keys rejected).
+- `tag` optional.
 
-Notes:
+### `Pack`
 
-- `--all-run-sets` fails if no run sets exist.
-- With `--all-run-sets` and explicit `--run-id`, each run ID is suffixed with sanitized run-set name.
+```python
+Pack(name="architecture", priority=10, options=(Option(...),))
+```
 
-## `validate-config`
+- `name` required.
+- `priority` optional integer (default `0`).
+- At least one of `options` or `options_from` must be set.
 
-Validate schema + planner normalization.
+### `PackSelector`
 
-Required:
+```python
+PackSelector(
+  ref="presets.architecture",
+  name="arch_ablation",
+  priority=20,
+  replace_options=True,
+  options_from=(OptionSource(ref="presets.arch", include_ids=("resnet18",)),),
+  options=(Option(...),),
+)
+```
 
-- `--experiment`
+### `MergeSpec`
 
-Optional:
+```python
+MergeSpec(
+  mode="merge",  # none | merge
+  strategies={"callbacks": "append_unique"},
+  delete_sentinel="__delete__",
+)
+```
 
-- `--run-set`
-- `--show-diagnostics`
-- `--format table|json`
+Allowed keys:
 
-## `inspect-config`
+- `mode`: `none | merge`
+- `strategies`: `error | replace | deep_merge | append_unique | set_union`
+- `delete_sentinel`
 
-Render composed config after imports/defs/select expansion.
+### `RunSetSpec`
 
-Required:
+```python
+RunSetSpec(
+  extends=("baseline",),
+  append={"merge": {"mode": "merge"}},
+  replace={"select": {"packs": [...]}},
+)
+```
 
-- `--experiment`
+`append`/`replace` roots are limited to `select`, `defaults`, `constraints`, `merge`.
 
-Optional:
+## Template Helpers
 
-- `--run-set`
-- `--show-diagnostics`
-- `--format yaml|json` (default `yaml`)
-- `--out` (writes rendered content to file)
+- `pack_param_values`: one path + iterable values -> `Pack`
+- `pack_param_linspace`: linear spacing variant
+- `pack_param_logspace`: logarithmic spacing variant
+- `pack_map`: mapping `option_id -> params` or `option_id -> {params, tag}`
+- `match_ids`: builds predicate for allowed `(left_id, right_id)` pairings
 
-## `run-local`
+## Notes
 
-Execute planned work on current machine.
-
-Required:
-
-- `--run` (path to run root)
-
-Selection flags:
-
-- `--batch-index` (repeatable)
-- `--config-id` (repeatable)
-- `--retry-file` (JSON from `rerun`)
-- retry-file implies resume semantics during execution.
-
-Profile flags:
-
-- `--profile`
-- `--profiles-file`
-
-Output flags:
-
-- `--dry-run`
-- `--format table|json`
-
-Help groups:
-
-- Selection
-- Profile
-- Output
-
-## `run-slurm`
-
-Submit task payloads to Slurm via Submitit.
-
-Required:
-
-- `--run`
-- resolved Slurm resources from profile values/defaults (`partition`, `time_min`, etc.)
-
-Profile flags:
-
-- `--profile`
-- `--profiles-file`
-
-Output flags:
-
-- `--dry-run`
-- `--format table|json`
-
-Help groups:
-
-- Selection
-- Profile
-- Output
-
-## `launch`
-
-Single command for validate + plan + execute.
-
-Required:
-
-- `--experiment`
-- `--out`
-- `--batch-size`
-
-Optional:
-
-- `--run-id`
-- `--run-set`
-- `--backend local|slurm` (default `local`)
-- `--skip-validate`
-- optional selection/profile flags from run commands
-- `--dry-run`
-- `--format table|json`
-
-## `recover`
-
-Single command for retry selection + execution.
-
-Required:
-
-- `--run`
-
-Optional:
-
-- `--status failed|terminated|missing` (default `failed`)
-- `--backend local|slurm` (default `local`)
-- optional selection/profile flags from run commands
-- `--dry-run`
-- `--format table|json`
-
-## `list-profiles`
-
-List profile presets.
-
-Flags:
-
-- `--profiles-file`
-- `--format table|json`
-
-## `status`
-
-Summarize run status from plan + result files.
-
-Flags:
-
-- `--run`
-- `--by-pack` (repeatable or comma-separated)
-- `--strict-jsonl` (fail if corrupt JSONL result lines are detected)
-- `--format table|json`
-
-Grouping fails if requested pack is unknown in selected options.
-
-## `report`
-
-Generate run report.
-
-Flags:
-
-- `--run`
-- `--by-pack` (repeatable or comma-separated)
-- `--strict-jsonl` (fail if corrupt JSONL result lines are detected)
-- `--format table|markdown|json`
-- `--out` (optional)
-
-When `--format table` and `--out` is provided, markdown is written to `--out`.
-
-## `rerun`
-
-Build retry metadata from current status.
-
-Flags:
-
-- `--run`
-- `--status failed|terminated|missing` (default `failed`)
-- `--config-id` (repeatable explicit additions)
-- `--format table|json`
-- `--dry-run`
-
-Writes `exec/retries/retry_<timestamp>.json` unless dry-run.
-
-## `collect`
-
-Aggregate `exec/results/task_*.jsonl` into summary.
-
-Flags:
-
-- `--run`
-- `--strict-jsonl` (fail if corrupt JSONL result lines are detected)
-- `--dry-run`
-- `--format table|json`
-
-Writes `exec/results/summary.json` unless dry-run.
-
-## `clean`
-
-Delete artifacts under run root.
-
-Required:
-
-- `--run`
-- one of `--plan`, `--exec`, `--all`
-
-If no scope flag is set, command fails.
-
-## Exit Codes
-
-- `0`: success
-- `1`: runtime/system/command error
-- `2`: configuration/validation error (`ConfigError`)
-- `130`: interrupted (`KeyboardInterrupt`)
+- `strict=True` validates the generated document schema.
+- `validate_with_geryon=True` in `to_yaml_file` runs planner-level semantic validation.

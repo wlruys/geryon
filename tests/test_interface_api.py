@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from geryon.dsl import Experiment, Option, Pack, Predicate, PredicateArg, require
+from geryon.interface import Experiment, Option, Pack, Predicate, PredicateArg, require
 from geryon.models import ConfigError
 from geryon.planner import plan_experiment
 from geryon.store import ArtifactStore

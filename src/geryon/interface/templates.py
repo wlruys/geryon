@@ -6,7 +6,7 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from geryon.models import ConfigError
 
-from geryon.dsl.specs import Option, Pack, Predicate, PredicateArg
+from geryon.interface.specs import Option, Pack, Predicate, PredicateArg
 
 
 def _sanitize_token(raw: str) -> str:

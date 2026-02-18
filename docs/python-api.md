@@ -90,4 +90,4 @@ Module: `geryon.models`
 - `GeryonError` (base runtime error)
 - `ConfigError` (validation/configuration errors)
 
-`ConfigError` is the expected exception type for invalid YAML/DSL/CLI configuration.
+`ConfigError` is the expected exception type for invalid YAML/interface/CLI configuration.
