@@ -9,8 +9,8 @@ nav:
   - Experiment YAML:
       - Schema Reference: experiments.md
       - Composition and Packs: packs.md
-  - Python Interface: interface.md
-  - CLI Reference: interface.md
+  - Python Interface: python-interface.md
+  - CLI Reference: cli-reference.md
   - Runtime:
       - Profiles: profiles.md
       - Artifacts and Status: runtime-artifacts.md
